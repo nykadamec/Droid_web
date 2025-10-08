@@ -1,5 +1,5 @@
 tunnel: webterm
-credentials-file: /Users/nykadamec/.cloudflared/webterm.json
+credentials-file: /Users/nykadamec/.cloudflared/7c70058e-8f85-4e75-87ad-adb3f523f495.json
 
 ingress:
   # HTTPS Frontend
