@@ -3,13 +3,13 @@ credentials-file: /Users/nykadamec/.cloudflared/7c70058e-8f85-4e75-87ad-adb3f523
 
 ingress:
   # HTTPS Frontend
-  - hostname: webterm.nykadamec.dev
+  - hostname: webterm.adamec.pro
     service: https://localhost:3000
     originRequest:
       noTLSVerify: true
   
   # WebSocket Server
-  - hostname: ws.webterm.nykadamec.dev
+  - hostname: ws.webterm.adamec.pro
     service: http://localhost:8000
     originRequest:
       noTLSVerify: true

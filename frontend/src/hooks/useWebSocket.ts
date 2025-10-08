@@ -36,7 +36,9 @@ export function useWebSocket(onMessage?: MessageHandler) {
 
     setStatus('connecting')
     
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+    // Pro localhost vždy používat ws:// (backend nepodporuje WSS)
+    const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+    const protocol = isLocalhost ? 'ws:' : (window.location.protocol === 'https:' ? 'wss:' : 'ws:')
     const wsUrl = `${protocol}//${window.location.hostname}:8000/ws`
 
     try {

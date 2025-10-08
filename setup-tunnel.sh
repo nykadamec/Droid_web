@@ -52,19 +52,19 @@ echo ""
 echo "🌐 Nastavuji DNS záznamy..."
 
 # Frontend
-if cloudflared tunnel route dns list | grep -q "webterm.nykadamec.dev"; then
-    echo "✅ DNS pro webterm.nykadamec.dev již existuje"
+if cloudflared tunnel route dns list | grep -q "webterm.adamec.pro"; then
+    echo "✅ DNS pro webterm.adamec.pro již existuje"
 else
-    echo "➕ Přidávám DNS záznam pro webterm.nykadamec.dev..."
-    cloudflared tunnel route dns $TUNNEL_NAME webterm.nykadamec.dev
+    echo "➕ Přidávám DNS záznam pro webterm.adamec.pro..."
+    cloudflared tunnel route dns $TUNNEL_NAME webterm.adamec.pro
 fi
 
 # WebSocket
-if cloudflared tunnel route dns list | grep -q "ws.webterm.nykadamec.dev"; then
-    echo "✅ DNS pro ws.webterm.nykadamec.dev již existuje"
+if cloudflared tunnel route dns list | grep -q "ws.webterm.adamec.pro"; then
+    echo "✅ DNS pro ws.webterm.adamec.pro již existuje"
 else
-    echo "➕ Přidávám DNS záznam pro ws.webterm.nykadamec.dev..."
-    cloudflared tunnel route dns $TUNNEL_NAME ws.webterm.nykadamec.dev
+    echo "➕ Přidávám DNS záznam pro ws.webterm.adamec.pro..."
+    cloudflared tunnel route dns $TUNNEL_NAME ws.webterm.adamec.pro
 fi
 
 echo ""
@@ -76,7 +76,7 @@ echo "  2. Spusť tunnel pomocí: npm run tunnel"
 echo "  3. Nebo pouze tunnel: npm run tunnel:only"
 echo ""
 echo "🌍 URL adresy:"
-echo "  Frontend:  https://webterm.nykadamec.dev"
-echo "  WebSocket: wss://ws.webterm.nykadamec.dev"
+echo "  Frontend:  https://webterm.adamec.pro"
+echo "  WebSocket: wss://ws.webterm.adamec.pro"
 echo ""
 echo "📚 Více info v TUNNEL.md"

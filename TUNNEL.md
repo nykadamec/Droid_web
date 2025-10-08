@@ -31,10 +31,10 @@ cloudflared tunnel create webterm
 ### 3. Nastav DNS záznamy
 ```bash
 # Frontend
-cloudflared tunnel route dns webterm webterm.nykadamec.dev
+cloudflared tunnel route dns webterm webterm.adamec.pro
 
 # WebSocket
-cloudflared tunnel route dns webterm ws.webterm.nykadamec.dev
+cloudflared tunnel route dns webterm ws.webterm.adamec.pro
 ```
 
 ### 4. Zkopíruj config
@@ -63,8 +63,8 @@ cloudflared tunnel --config cloudflared.yml run webterm
 
 Po spuštění tunnelu:
 
-- **Frontend**: https://webterm.nykadamec.dev
-- **WebSocket**: wss://ws.webterm.nykadamec.dev
+- **Frontend**: https://webterm.adamec.pro
+- **WebSocket**: wss://ws.webterm.adamec.pro
 
 ## 📝 Konfigurace
 
@@ -74,12 +74,12 @@ tunnel: webterm
 credentials-file: ~/.cloudflared/webterm.json
 
 ingress:
-  - hostname: webterm.nykadamec.dev
+  - hostname: webterm.adamec.pro
     service: https://localhost:3000
     originRequest:
       noTLSVerify: true
   
-  - hostname: ws.webterm.nykadamec.dev
+  - hostname: ws.webterm.adamec.pro
     service: http://localhost:8000
     originRequest:
       noTLSVerify: true
