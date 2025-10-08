@@ -136,11 +136,15 @@ const Terminal = forwardRef<TerminalHandle, TerminalProps>(({ isConnected, curre
         }
         
         // File/directory completion pro argumenty
-        const parts = commandBufferRef.current.split(' ')
-        if (parts.length > 1 && onRequestFiles) {
+        const currentCmd = commandBufferRef.current
+        const cmdTokens = currentCmd.split(' ')
+        if (cmdTokens.length > 1 && onRequestFiles) {
           // Druhé+ slovo = argument (soubor/složka)
-          const lastPart = parts[parts.length - 1]
-          onRequestFiles(lastPart)
+          const finalToken = cmdTokens.slice(-1)[0] || ''
+          // Uložit aktuální buffer pro pozdější re-print
+          const win: any = window
+          win.__currentCommandBuffer = currentCmd
+          onRequestFiles(finalToken)
           return
         }
       }
@@ -176,9 +180,9 @@ const Terminal = forwardRef<TerminalHandle, TerminalProps>(({ isConnected, curre
           xterm.write('\b \b')
           
           // Aktualizovat suggestions
-          const parts = commandBufferRef.current.split(' ')
-          const firstWord = parts[0]
-          const isCommand = parts.length === 1
+          const cmdParts2 = commandBufferRef.current.split(' ')
+          const firstWord = cmdParts2[0]
+          const isCommand = cmdParts2.length === 1
           
           if (isCommand) {
             setCommandInput(firstWord)
@@ -192,8 +196,15 @@ const Terminal = forwardRef<TerminalHandle, TerminalProps>(({ isConnected, curre
           suggestionIndexRef.current = 0
         }
       } else if (code >= 32) { // Printable characters
-        commandBufferRef.current += data
-        xterm.write(data)
+        // Zkontrolovat jestli nemáme updated buffer z file completion
+        if ((window as any).__updatedCommandBuffer) {
+          commandBufferRef.current = (window as any).__updatedCommandBuffer
+          ;(window as any).__updatedCommandBuffer = null
+          ;(window as any).__currentCommandBuffer = null
+        } else {
+          commandBufferRef.current += data
+          xterm.write(data)
+        }
         
         // Aktualizovat suggestions - pouze pro první slovo (samotný příkaz)
         const parts = commandBufferRef.current.split(' ')

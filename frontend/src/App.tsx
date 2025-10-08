@@ -43,10 +43,26 @@ function App() {
         // File completion odpověď
         if (message.payload.files && Array.isArray(message.payload.files) && terminalRef.current) {
           const files = message.payload.files
+          const currentBuffer = (window as any).__currentCommandBuffer || ''
           
           if (files.length === 1) {
-            // Pouze jeden match - dokončit automaticky
-            (window as any).__autoCompleteFile = files[0]
+            // Pouze jeden match - dokončit automaticky v terminálu
+            const completion = files[0]
+            const bufferParts = currentBuffer.split(' ')
+            
+            // Smazat poslední část (prefix)
+            const lastBufferPart = bufferParts[bufferParts.length - 1]
+            for (let i = 0; i < lastBufferPart.length; i++) {
+              terminalRef.current.writeOutput('\b \b')
+            }
+            
+            // Zapsat completion
+            terminalRef.current.writeOutput(completion)
+            
+            // Aktualizovat command buffer přes window
+            bufferParts[bufferParts.length - 1] = completion
+            ;(window as any).__updatedCommandBuffer = bufferParts.join(' ')
+            
           } else if (files.length > 1) {
             // Více matches - zobrazit možnosti
             terminalRef.current.writeOutput('\r\n')
@@ -54,6 +70,15 @@ function App() {
               terminalRef.current!.writeOutput(file + '  ')
             })
             terminalRef.current.writeOutput(`\r\n\x1b[1;36m${currentDir}\x1b[0m \x1b[1;32m➜\x1b[0m `)
+            
+            // Re-print původního příkazu
+            terminalRef.current.writeOutput(currentBuffer)
+            
+            // Aktualizovat command buffer přes window
+            ;(window as any).__updatedCommandBuffer = currentBuffer
+          } else if (files.length === 0) {
+            // Žádný match - beep
+            terminalRef.current.writeOutput('\x07')
           }
         }
         break
