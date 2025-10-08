@@ -1,8 +1,9 @@
-import { useEffect, useRef, useImperativeHandle, forwardRef } from 'react'
+import { useEffect, useRef, useImperativeHandle, forwardRef, useState } from 'react'
 import { Terminal as XTerm } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import { WebLinksAddon } from '@xterm/addon-web-links'
 import '@xterm/xterm/css/xterm.css'
+import CommandSuggestions from './CommandSuggestions'
 
 interface TerminalProps {
   isConnected: boolean
@@ -24,6 +25,8 @@ const Terminal = forwardRef<TerminalHandle, TerminalProps>(({ isConnected, onCom
   const fitAddonRef = useRef<FitAddon | null>(null)
   const commandBufferRef = useRef<string>('')
   const ptyModeRef = useRef<boolean>(false)
+  const [commandInput, setCommandInput] = useState('')
+  const [showSuggestions, setShowSuggestions] = useState(false)
 
   useEffect(() => {
     if (!terminalRef.current) return
@@ -103,14 +106,29 @@ const Terminal = forwardRef<TerminalHandle, TerminalProps>(({ isConnected, onCom
           xterm.write('$ ')
         }
         commandBufferRef.current = ''
+        setCommandInput('')
+        setShowSuggestions(false)
       } else if (code === 127) { // Backspace
         if (commandBufferRef.current.length > 0) {
           commandBufferRef.current = commandBufferRef.current.slice(0, -1)
           xterm.write('\b \b')
+          
+          // Aktualizovat suggestions
+          const firstWord = commandBufferRef.current.split(' ')[0]
+          setCommandInput(firstWord)
+          setShowSuggestions(firstWord.length > 0)
         }
+      } else if (code === 9) { // Tab - handled by CommandSuggestions
+        // Nepsat tab do terminálu
+        return
       } else if (code >= 32) { // Printable characters
         commandBufferRef.current += data
         xterm.write(data)
+        
+        // Aktualizovat suggestions - pouze pro první slovo (samotný příkaz)
+        const firstWord = commandBufferRef.current.split(' ')[0]
+        setCommandInput(firstWord)
+        setShowSuggestions(firstWord.length > 0 && commandBufferRef.current.indexOf(' ') === -1)
       }
     })
 
@@ -161,11 +179,32 @@ const Terminal = forwardRef<TerminalHandle, TerminalProps>(({ isConnected, onCom
     }
   }, [isConnected])
 
+  const handleSuggestionSelect = (command: string) => {
+    if (!xtermRef.current) return
+    
+    // Vymazat aktuální input
+    const currentInput = commandBufferRef.current
+    for (let i = 0; i < currentInput.length; i++) {
+      xtermRef.current.write('\b \b')
+    }
+    
+    // Zapsat vybraný příkaz
+    xtermRef.current.write(command)
+    commandBufferRef.current = command
+    setCommandInput(command)
+    setShowSuggestions(false)
+  }
+
   return (
-    <div className="terminal-container">
+    <div className="terminal-container relative">
       <div 
         ref={terminalRef} 
         className="w-full h-full"
+      />
+      <CommandSuggestions 
+        input={commandInput}
+        onSelect={handleSuggestionSelect}
+        visible={showSuggestions && !ptyModeRef.current}
       />
     </div>
   )
