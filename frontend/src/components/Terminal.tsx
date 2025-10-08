@@ -71,8 +71,24 @@ const Terminal = forwardRef<TerminalHandle, TerminalProps>(({ isConnected, curre
 
     xterm.loadAddon(fitAddon)
     xterm.loadAddon(webLinksAddon)
-    xterm.open(terminalRef.current)
-    fitAddon.fit()
+    
+    try {
+      xterm.open(terminalRef.current)
+    } catch (error) {
+      // Ignorovat dimensions error při inicializaci
+      if (!error.message?.includes('dimensions')) {
+        console.error('Terminal open error:', error)
+      }
+    }
+    
+    // Počkat na DOM mount před fit
+    setTimeout(() => {
+      try {
+        fitAddon.fit()
+      } catch (error) {
+        // Ignorovat fit error při inicializaci
+      }
+    }, 0)
 
     xtermRef.current = xterm
     fitAddonRef.current = fitAddon
