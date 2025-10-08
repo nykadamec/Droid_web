@@ -41,3 +41,8 @@ Thumbs.db
 
 # TypeScript
 *.tsbuildinfo
+
+# Cloudflare Tunnel credentials
+.cloudflared/
+cloudflared.log
+**/webterm.json
