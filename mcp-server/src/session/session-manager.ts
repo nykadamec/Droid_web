@@ -47,8 +47,8 @@ export class SessionManager {
     session.buffer.push(data)
 
     // Omezit velikost bufferu (počet chunks, ne řádků)
-    if (session.buffer.length > this.maxBufferSize / 10) {
-      session.buffer = session.buffer.slice(-(this.maxBufferSize / 10))
+    if (session.buffer.length > this.MAX_BUFFER_SIZE / 10) {
+      session.buffer = session.buffer.slice(-(this.MAX_BUFFER_SIZE / 10))
     }
 
     session.lastActivity = new Date()
