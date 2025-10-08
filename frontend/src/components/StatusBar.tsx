@@ -1,8 +1,9 @@
 interface StatusBarProps {
   status: 'connecting' | 'connected' | 'disconnected' | 'error'
+  sessionId?: string
 }
 
-export default function StatusBar({ status }: StatusBarProps) {
+export default function StatusBar({ status, sessionId }: StatusBarProps) {
   const getStatusColor = () => {
     switch (status) {
       case 'connected':
@@ -29,6 +30,8 @@ export default function StatusBar({ status }: StatusBarProps) {
     }
   }
 
+  const shortSessionId = sessionId ? sessionId.split('-').slice(-2).join('-') : 'loading...'
+
   return (
     <div className="flex items-center justify-between px-4 py-2 bg-slate-900 border-b border-slate-700">
       <div className="flex items-center gap-2">
@@ -36,7 +39,7 @@ export default function StatusBar({ status }: StatusBarProps) {
         <span className="text-sm text-slate-300">{getStatusText()}</span>
       </div>
       <div className="text-xs text-slate-500">
-        Factory Droid Web CLI
+        Factory Droid Web CLI | <span className="text-cyan-500">{shortSessionId}</span>
       </div>
     </div>
   )

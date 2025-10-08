@@ -6,6 +6,7 @@ import { useWebSocket } from './hooks/useWebSocket'
 function App() {
   const [isConnected, setIsConnected] = useState(false)
   const [currentDir, setCurrentDir] = useState('')
+  const [sessionId, setSessionId] = useState<string>('')
   const terminalRef = useRef<TerminalHandle>(null)
 
   const handleMessage = useCallback((message: any) => {
@@ -40,6 +41,7 @@ function App() {
         break
       case 'session-ready':
         console.log('Session ready:', message.payload.sessionId)
+        setSessionId(message.payload.sessionId)
         break
       case 'output':
         if (message.payload.data) {
@@ -91,7 +93,7 @@ function App() {
 
   return (
     <div className="flex flex-col h-screen bg-terminal-bg">
-      <StatusBar status={status} />
+      <StatusBar status={status} sessionId={sessionId} />
       <main className="flex-1 overflow-hidden">
         <Terminal 
           ref={terminalRef}
