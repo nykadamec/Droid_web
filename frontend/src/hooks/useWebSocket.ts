@@ -7,11 +7,18 @@ interface WebSocketMessage {
   payload: any
 }
 
-export function useWebSocket() {
+type MessageHandler = (message: WebSocketMessage) => void
+
+export function useWebSocket(onMessage?: MessageHandler) {
   const [status, setStatus] = useState<ConnectionStatus>('disconnected')
   const wsRef = useRef<WebSocket | null>(null)
   const reconnectTimeoutRef = useRef<number>()
   const reconnectAttemptsRef = useRef(0)
+  const messageHandlerRef = useRef<MessageHandler | undefined>(onMessage)
+
+  useEffect(() => {
+    messageHandlerRef.current = onMessage
+  }, [onMessage])
 
   const connect = useCallback(() => {
     if (wsRef.current?.readyState === WebSocket.OPEN) return
@@ -89,6 +96,10 @@ export function useWebSocket() {
   }, [])
 
   const handleMessage = (message: WebSocketMessage) => {
+    if (messageHandlerRef.current) {
+      messageHandlerRef.current(message)
+    }
+    
     switch (message.type) {
       case 'output':
         console.log('Output:', message.payload)

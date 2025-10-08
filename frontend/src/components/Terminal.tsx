@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useImperativeHandle, forwardRef } from 'react'
 import { Terminal as XTerm } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import { WebLinksAddon } from '@xterm/addon-web-links'
@@ -9,7 +9,12 @@ interface TerminalProps {
   onCommand: (command: string) => void
 }
 
-export default function Terminal({ isConnected, onCommand }: TerminalProps) {
+export interface TerminalHandle {
+  writeOutput: (data: string) => void
+  writeError: (data: string) => void
+}
+
+const Terminal = forwardRef<TerminalHandle, TerminalProps>(({ isConnected, onCommand }, ref) => {
   const terminalRef = useRef<HTMLDivElement>(null)
   const xtermRef = useRef<XTerm | null>(null)
   const fitAddonRef = useRef<FitAddon | null>(null)
@@ -59,8 +64,12 @@ export default function Terminal({ isConnected, onCommand }: TerminalProps) {
     xtermRef.current = xterm
     fitAddonRef.current = fitAddon
 
-    xterm.writeln('🤖 Factory Droid Web CLI')
-    xterm.writeln('Připojování k MCP serveru...\n')
+    xterm.writeln('\x1b[1;36m╭─────────────────────────────────────╮\x1b[0m')
+    xterm.writeln('\x1b[1;36m│  🤖 Factory Droid Web CLI          │\x1b[0m')
+    xterm.writeln('\x1b[1;36m╰─────────────────────────────────────╯\x1b[0m')
+    xterm.writeln('')
+    xterm.writeln('Připojování k MCP serveru...')
+    xterm.writeln('')
 
     xterm.onData((data) => {
       const code = data.charCodeAt(0)
@@ -70,9 +79,10 @@ export default function Terminal({ isConnected, onCommand }: TerminalProps) {
         const command = commandBufferRef.current.trim()
         if (command && isConnected) {
           onCommand(command)
+        } else if (!command) {
+          xterm.write('\x1b[1;32m➜\x1b[0m ')
         }
         commandBufferRef.current = ''
-        xterm.write('$ ')
       } else if (code === 127) { // Backspace
         if (commandBufferRef.current.length > 0) {
           commandBufferRef.current = commandBufferRef.current.slice(0, -1)
@@ -94,16 +104,32 @@ export default function Terminal({ isConnected, onCommand }: TerminalProps) {
       window.removeEventListener('resize', handleResize)
       xterm.dispose()
     }
-  }, [])
+  }, [isConnected, onCommand])
+
+  useImperativeHandle(ref, () => ({
+    writeOutput: (data: string) => {
+      if (xtermRef.current && data) {
+        xtermRef.current.write(data)
+      }
+    },
+    writeError: (data: string) => {
+      if (xtermRef.current && data) {
+        xtermRef.current.write(`\x1b[31m${data}\x1b[0m`)
+      }
+    }
+  }))
 
   useEffect(() => {
     if (!xtermRef.current) return
 
     if (isConnected) {
-      xtermRef.current.writeln('✅ Připojeno k MCP serveru\n')
-      xtermRef.current.write('$ ')
+      xtermRef.current.writeln('\x1b[32m✅ Připojeno k MCP serveru\x1b[0m')
+      xtermRef.current.writeln('')
+      xtermRef.current.writeln('\x1b[90mZadejte příkaz nebo "help" pro nápovědu\x1b[0m')
+      xtermRef.current.writeln('')
+      xtermRef.current.write('\x1b[1;32m➜\x1b[0m ')
     } else {
-      xtermRef.current.writeln('❌ Odpojeno od MCP serveru')
+      xtermRef.current.writeln('\x1b[31m❌ Odpojeno od MCP serveru\x1b[0m')
     }
   }, [isConnected])
 
@@ -115,4 +141,8 @@ export default function Terminal({ isConnected, onCommand }: TerminalProps) {
       />
     </div>
   )
-}
+})
+
+Terminal.displayName = 'Terminal'
+
+export default Terminal
