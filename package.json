@@ -4,13 +4,13 @@
   "private": true,
   "scripts": {
     "install:all": "npm install && cd frontend && npm install && cd ../mcp-server && npm install",
+    "start": "cd frontend && npm run dev",
+    "dev": "concurrently \"npm run dev:server\" \"npm run dev:frontend\"",
     "dev:frontend": "cd frontend && npm run dev",
     "dev:server": "cd mcp-server && npm run dev",
-    "dev": "concurrently \"npm run dev:server\" \"npm run dev:frontend\"",
+    "build": "npm run build:server && npm run build:frontend",
     "build:frontend": "cd frontend && npm run build",
     "build:server": "cd mcp-server && npm run build",
-    "build": "npm run build:server && npm run build:frontend",
-    "start": "npm run start:server",
     "start:server": "cd mcp-server && npm start"
   },
   "devDependencies": {
