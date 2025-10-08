@@ -18,10 +18,25 @@ export class DroidBridge {
   private currentWorkingDirectory: string = process.cwd()
 
   async executeCommand(command: string): Promise<CommandResult> {
+    // Prázdný příkaz - vrátit prázdný výsledek
+    if (!command || command.trim() === '') {
+      return {
+        stdout: '',
+        stderr: '',
+        exitCode: 0,
+        cwd: this.currentWorkingDirectory
+      }
+    }
+    
     const [cmd, ...args] = command.trim().split(' ')
 
     if (!cmd) {
-      throw new Error('Prázdný příkaz')
+      return {
+        stdout: '',
+        stderr: '',
+        exitCode: 0,
+        cwd: this.currentWorkingDirectory
+      }
     }
 
     // Speciální příkaz: cd

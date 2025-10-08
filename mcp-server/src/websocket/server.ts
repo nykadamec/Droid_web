@@ -166,6 +166,11 @@ export class WebSocketServer {
   }
 
   private async handleCommand(ws: WebSocket, command: string, usePTY: boolean = true) {
+    // Ignorovat prázdné příkazy
+    if (!command || command.trim() === '') {
+      return
+    }
+    
     logger.info(`Executing command: ${command} (PTY: ${usePTY})`)
 
     const [cmd, ...args] = command.trim().split(' ')
