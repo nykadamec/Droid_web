@@ -7,7 +7,7 @@ import { SessionManager } from '../session/session-manager.js'
 import { logger } from '../utils/logger.js'
 
 const MessageSchema = z.object({
-  type: z.enum(['command', 'ping', 'pty-input', 'pty-resize', 'init-session', 'request-welcome']),
+  type: z.enum(['command', 'ping', 'pty-input', 'pty-resize', 'init-session', 'request-welcome', 'request-files']),
   payload: z.any()
 })
 
@@ -115,6 +115,9 @@ export class WebSocketServer {
             message: `\x1b[32m✅ Připojeno k MCP serveru\x1b[0m\r\n\r\n\x1b[90mZadejte příkaz nebo "help" pro nápovědu\x1b[0m\r\n\r\n\x1b[1;36m${initialCwd}\x1b[0m \x1b[1;32m➜\x1b[0m `
           }
         })
+        break
+      case 'request-files':
+        await this.handleRequestFiles(ws, message.payload.prefix || '')
         break
       case 'command':
         await this.handleCommand(ws, message.payload.command, message.payload.usePTY)
@@ -280,6 +283,51 @@ export class WebSocketServer {
     if (session) {
       session.kill()
       this.ptySessions.delete(ws)
+    }
+  }
+
+  private async handleRequestFiles(ws: WebSocket, prefix: string) {
+    try {
+      const { readdirSync, statSync } = await import('fs')
+      const { join } = await import('path')
+      
+      const cwd = this.droidBridge.getCurrentWorkingDirectory()
+      
+      // Získat všechny soubory/složky v CWD
+      const entries = readdirSync(cwd)
+      
+      // Filtrovat podle prefixu
+      const matches = entries.filter(entry => {
+        return entry.toLowerCase().startsWith(prefix.toLowerCase())
+      })
+      
+      // Přidat '/' za složky
+      const filesWithType = matches.map(entry => {
+        const fullPath = join(cwd, entry)
+        try {
+          const stats = statSync(fullPath)
+          return stats.isDirectory() ? entry + '/' : entry
+        } catch {
+          return entry
+        }
+      })
+      
+      this.sendMessage(ws, {
+        type: 'file-completion',
+        payload: {
+          prefix,
+          files: filesWithType
+        }
+      })
+    } catch (error) {
+      logger.error({ err: error }, 'Error getting file list')
+      this.sendMessage(ws, {
+        type: 'file-completion',
+        payload: {
+          prefix,
+          files: []
+        }
+      })
     }
   }
 

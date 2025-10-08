@@ -39,6 +39,24 @@ function App() {
           terminalRef.current.writeOutput(message.payload.message)
         }
         break
+      case 'file-completion':
+        // File completion odpověď
+        if (message.payload.files && Array.isArray(message.payload.files) && terminalRef.current) {
+          const files = message.payload.files
+          
+          if (files.length === 1) {
+            // Pouze jeden match - dokončit automaticky
+            (window as any).__autoCompleteFile = files[0]
+          } else if (files.length > 1) {
+            // Více matches - zobrazit možnosti
+            terminalRef.current.writeOutput('\r\n')
+            files.forEach((file: string) => {
+              terminalRef.current!.writeOutput(file + '  ')
+            })
+            terminalRef.current.writeOutput(`\r\n\x1b[1;36m${currentDir}\x1b[0m \x1b[1;32m➜\x1b[0m `)
+          }
+        }
+        break
       case 'session-ready':
         console.log('Session ready:', message.payload.sessionId)
         setSessionId(message.payload.sessionId)
@@ -80,7 +98,7 @@ function App() {
     }
   }, [currentDir])
 
-  const { status, connect, disconnect, sendCommand, sendPTYInput, sendPTYResize } = useWebSocket(handleMessage)
+  const { status, connect, disconnect, sendCommand, sendPTYInput, sendPTYResize, sendMessage } = useWebSocket(handleMessage)
 
   useEffect(() => {
     connect()
@@ -98,9 +116,14 @@ function App() {
         <Terminal 
           ref={terminalRef}
           isConnected={isConnected}
+          currentDir={currentDir}
           onCommand={sendCommand}
           onPTYInput={sendPTYInput}
           onPTYResize={sendPTYResize}
+          onRequestFiles={(prefix) => {
+            // Požádat server o seznam souborů pro completion
+            sendMessage({ type: 'request-files', payload: { prefix } })
+          }}
         />
       </main>
     </div>

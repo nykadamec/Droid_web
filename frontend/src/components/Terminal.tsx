@@ -7,9 +7,11 @@ import CommandSuggestions from './CommandSuggestions'
 
 interface TerminalProps {
   isConnected: boolean
+  currentDir: string
   onCommand: (command: string, usePTY?: boolean) => void
   onPTYInput?: (data: string) => void
   onPTYResize?: (cols: number, rows: number) => void
+  onRequestFiles?: (path: string) => void
 }
 
 export interface TerminalHandle {
@@ -19,7 +21,7 @@ export interface TerminalHandle {
   clear: () => void
 }
 
-const Terminal = forwardRef<TerminalHandle, TerminalProps>(({ isConnected, onCommand, onPTYInput, onPTYResize }, ref) => {
+const Terminal = forwardRef<TerminalHandle, TerminalProps>(({ isConnected, currentDir, onCommand, onPTYInput, onPTYResize, onRequestFiles }, ref) => {
   const terminalRef = useRef<HTMLDivElement>(null)
   const xtermRef = useRef<XTerm | null>(null)
   const fitAddonRef = useRef<FitAddon | null>(null)
@@ -89,7 +91,7 @@ const Terminal = forwardRef<TerminalHandle, TerminalProps>(({ isConnected, onCom
         return
       }
 
-      // Ctrl+C - smazat aktuální input
+      // Ctrl+C - smazat aktuální input a nový řádek
       if (data === '\x03') { // Ctrl+C
         commandBufferRef.current = ''
         setCommandInput('')
@@ -98,6 +100,8 @@ const Terminal = forwardRef<TerminalHandle, TerminalProps>(({ isConnected, onCom
         setSuggestionIndex(0)
         suggestionIndexRef.current = 0
         xterm.write('^C\r\n')
+        // Zobrazit nový prompt - příkaz se neprovede
+        xterm.write('\x1b[1;36m' + (currentDir || '~') + '\x1b[0m \x1b[1;32m➜\x1b[0m ')
         return
       }
 
@@ -128,6 +132,15 @@ const Terminal = forwardRef<TerminalHandle, TerminalProps>(({ isConnected, onCom
           if (suggestions.length > 0 && suggestionIndexRef.current < suggestions.length) {
             handleSuggestionSelect(suggestions[suggestionIndexRef.current])
           }
+          return
+        }
+        
+        // File/directory completion pro argumenty
+        const parts = commandBufferRef.current.split(' ')
+        if (parts.length > 1 && onRequestFiles) {
+          // Druhé+ slovo = argument (soubor/složka)
+          const lastPart = parts[parts.length - 1]
+          onRequestFiles(lastPart)
           return
         }
       }

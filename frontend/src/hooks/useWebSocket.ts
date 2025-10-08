@@ -100,37 +100,34 @@ export function useWebSocket(onMessage?: MessageHandler) {
     setStatus('disconnected')
   }, [])
 
-  const sendCommand = useCallback((command: string, usePTY: boolean = true) => {
+  const sendMessage = useCallback((message: any) => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
-      const message = {
-        type: 'command',
-        payload: { command, usePTY }
-      }
       wsRef.current.send(JSON.stringify(message))
     } else {
       console.warn('WebSocket is not connected')
     }
   }, [])
 
+  const sendCommand = useCallback((command: string, usePTY: boolean = true) => {
+    sendMessage({
+      type: 'command',
+      payload: { command, usePTY }
+    })
+  }, [sendMessage])
+
   const sendPTYInput = useCallback((data: string) => {
-    if (wsRef.current?.readyState === WebSocket.OPEN) {
-      const message = {
-        type: 'pty-input',
-        payload: { data }
-      }
-      wsRef.current.send(JSON.stringify(message))
-    }
-  }, [])
+    sendMessage({
+      type: 'pty-input',
+      payload: { data }
+    })
+  }, [sendMessage])
 
   const sendPTYResize = useCallback((cols: number, rows: number) => {
-    if (wsRef.current?.readyState === WebSocket.OPEN) {
-      const message = {
-        type: 'pty-resize',
-        payload: { cols, rows }
-      }
-      wsRef.current.send(JSON.stringify(message))
-    }
-  }, [])
+    sendMessage({
+      type: 'pty-resize',
+      payload: { cols, rows }
+    })
+  }, [sendMessage])
 
   const handleMessage = (message: WebSocketMessage) => {
     if (messageHandlerRef.current) {
@@ -162,6 +159,7 @@ export function useWebSocket(onMessage?: MessageHandler) {
     disconnect,
     sendCommand,
     sendPTYInput,
-    sendPTYResize
+    sendPTYResize,
+    sendMessage
   }
 }
