@@ -122,10 +122,12 @@ Frontend se automaticky připojí k WebSocket serveru na `ws://localhost:8080/ws
 - Package managery: `npm`, `pip`, `brew`, atd.
 
 💡 **Terminal podporuje:**
+- ✅ **Persistentní session** - obsah terminálu přežije refresh stránky (F5)
 - ✅ Aktuální adresář v promptu (např. `~/Documents ➜`)
 - ✅ Barevný výstup (ANSI colors)
 - ✅ PTY režim pro interaktivní aplikace
 - ✅ Persistentní working directory napříč příkazy
+- ✅ Historie ukládána na serveru (max 10000 řádků, 24h timeout)
 
 ## 🔒 Bezpečnost
 
@@ -166,23 +168,53 @@ Frontend se automaticky připojí k WebSocket serveru na `ws://localhost:8080/ws
 
 ### WebSocket Messages
 
-**Client → Server:**
+**Session Initialization:**
 ```typescript
+// Client → Server (při připojení)
 {
-  type: 'command',
-  payload: { command: 'droid chat' }
+  type: 'init-session',
+  payload: { sessionId: 'session-xyz' }
+}
+
+// Server → Client (restore history)
+{
+  type: 'restore-buffer',
+  payload: { data: 'terminal history...' }
 }
 ```
 
-**Server → Client:**
+**Command Execution:**
 ```typescript
+// Client → Server
+{
+  type: 'command',
+  payload: { command: 'ls -la', usePTY: true }
+}
+
+// Server → Client
 {
   type: 'output',
   payload: { 
-    data: 'Response...',
+    data: 'files...',
     error: '',
-    exitCode: 0
+    exitCode: 0,
+    cwd: '/current/path'
   }
+}
+```
+
+**PTY Mode:**
+```typescript
+// PTY input (real-time)
+{
+  type: 'pty-input',
+  payload: { data: 'user input' }
+}
+
+// PTY output (real-time)
+{
+  type: 'pty-output',
+  payload: { data: 'terminal output' }
 }
 ```
 
