@@ -74,8 +74,8 @@ function App() {
             // Re-print původního příkazu
             terminalRef.current.writeOutput(currentBuffer)
             
-            // Aktualizovat command buffer přes window
-            ;(window as any).__updatedCommandBuffer = currentBuffer
+            // Trigger okamžité aktualizaci bufferu bez čekání na další input
+            ;(window as any).__forceUpdateBuffer = currentBuffer
           } else if (files.length === 0) {
             // Žádný match - beep
             terminalRef.current.writeOutput('\x07')

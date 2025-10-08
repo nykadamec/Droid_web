@@ -195,7 +195,18 @@ const Terminal = forwardRef<TerminalHandle, TerminalProps>(({ isConnected, curre
           setSuggestionIndex(0)
           suggestionIndexRef.current = 0
         }
-      } else if (code >= 32) { // Printable characters
+      }
+      
+      // Zkontrolovat force update bufferu (po zobrazení file completion matches)
+      const win = window as any
+      if (win.__forceUpdateBuffer) {
+        commandBufferRef.current = win.__forceUpdateBuffer
+        win.__forceUpdateBuffer = null
+        win.__currentCommandBuffer = null
+        win.__updatedCommandBuffer = null
+      }
+      
+      if (code >= 32) { // Printable characters
         // Zkontrolovat jestli nemáme updated buffer z file completion
         if ((window as any).__updatedCommandBuffer) {
           commandBufferRef.current = (window as any).__updatedCommandBuffer
