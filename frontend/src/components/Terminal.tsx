@@ -99,7 +99,8 @@ const Terminal = forwardRef<TerminalHandle, TerminalProps>(({ isConnected, onCom
           }
           onCommand(command)
         } else if (!command) {
-          xterm.write('\x1b[1;36m~\x1b[0m \x1b[1;32m➜\x1b[0m ')
+          // Prázdný příkaz - zobrazit prompt (cesta se načte ze serveru)
+          xterm.write('$ ')
         }
         commandBufferRef.current = ''
       } else if (code === 127) { // Backspace

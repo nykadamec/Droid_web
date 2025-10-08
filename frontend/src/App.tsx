@@ -5,7 +5,7 @@ import { useWebSocket } from './hooks/useWebSocket'
 
 function App() {
   const [isConnected, setIsConnected] = useState(false)
-  const [currentDir, setCurrentDir] = useState('~')
+  const [currentDir, setCurrentDir] = useState('')
   const terminalRef = useRef<TerminalHandle>(null)
 
   const handleMessage = useCallback((message: any) => {
@@ -54,12 +54,9 @@ function App() {
         // Aktualizovat CWD pokud je v odpovědi
         let newDir = currentDir
         if (message.payload.cwd) {
-          // Zkrátit cestu pro zobrazení
-          const displayPath = message.payload.cwd.startsWith('/Users/') 
-            ? message.payload.cwd.replace(/^\/Users\/[^\/]+/, '~')
-            : message.payload.cwd
-          setCurrentDir(displayPath)
-          newDir = displayPath
+          // Zobrazit plnou cestu
+          setCurrentDir(message.payload.cwd)
+          newDir = message.payload.cwd
         }
         terminalRef.current.writeOutput(`\r\n\x1b[1;36m${newDir}\x1b[0m \x1b[1;32m➜\x1b[0m `)
         break

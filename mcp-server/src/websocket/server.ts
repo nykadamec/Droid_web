@@ -108,10 +108,11 @@ export class WebSocketServer {
         break
       case 'request-welcome':
         // Poslat welcome zprávy pro novou session
+        const initialCwd = this.droidBridge.getCurrentWorkingDirectory()
         this.sendMessage(ws, {
           type: 'welcome',
           payload: {
-            message: '\x1b[32m✅ Připojeno k MCP serveru\x1b[0m\r\n\r\n\x1b[90mZadejte příkaz nebo "help" pro nápovědu\x1b[0m\r\n\r\n\x1b[1;36m~\x1b[0m \x1b[1;32m➜\x1b[0m '
+            message: `\x1b[32m✅ Připojeno k MCP serveru\x1b[0m\r\n\r\n\x1b[90mZadejte příkaz nebo "help" pro nápovědu\x1b[0m\r\n\r\n\x1b[1;36m${initialCwd}\x1b[0m \x1b[1;32m➜\x1b[0m `
           }
         })
         break
@@ -188,8 +189,8 @@ export class WebSocketServer {
           if (result.stderr) {
             this.sessionManager.appendToBuffer(sessionId, result.stderr)
           }
-          // Uložit i prompt s CWD
-          this.sessionManager.appendToBuffer(sessionId, `\r\n\x1b[1;36m${cwd.replace(/^\/Users\/[^\/]+/, '~')}\x1b[0m \x1b[1;32m➜\x1b[0m `)
+          // Uložit i prompt s CWD (plná cesta)
+          this.sessionManager.appendToBuffer(sessionId, `\r\n\x1b[1;36m${cwd}\x1b[0m \x1b[1;32m➜\x1b[0m `)
         }
         
         this.sendMessage(ws, {
