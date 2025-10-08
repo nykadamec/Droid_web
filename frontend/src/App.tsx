@@ -23,13 +23,25 @@ function App() {
         }
         terminalRef.current.writeOutput('\r\n\x1b[1;32m➜\x1b[0m ')
         break
+      case 'pty-output':
+        // PTY output už má správné \r\n
+        terminalRef.current.writeOutput(message.payload.data)
+        break
+      case 'pty-started':
+        console.log('PTY session started:', message.payload.sessionId)
+        break
+      case 'pty-exit':
+        terminalRef.current.exitPTYMode()
+        terminalRef.current.writeOutput('\r\n\x1b[90m[Process exited with code ' + message.payload.exitCode + ']\x1b[0m\r\n')
+        terminalRef.current.writeOutput('\x1b[1;32m➜\x1b[0m ')
+        break
       case 'error':
         terminalRef.current.writeError(`\r\n${message.payload.message}\r\n\x1b[1;32m➜\x1b[0m `)
         break
     }
   }, [])
 
-  const { status, connect, disconnect, sendCommand } = useWebSocket(handleMessage)
+  const { status, connect, disconnect, sendCommand, sendPTYInput, sendPTYResize } = useWebSocket(handleMessage)
 
   useEffect(() => {
     connect()
@@ -48,6 +60,8 @@ function App() {
           ref={terminalRef}
           isConnected={isConnected}
           onCommand={sendCommand}
+          onPTYInput={sendPTYInput}
+          onPTYResize={sendPTYResize}
         />
       </main>
     </div>

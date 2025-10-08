@@ -2,10 +2,11 @@ import { WebSocketServer as WSServer, WebSocket } from 'ws'
 import { createServer, IncomingMessage } from 'http'
 import { z } from 'zod'
 import { DroidBridge } from '../droid/bridge.js'
+import { PTYSession } from '../droid/pty-session.js'
 import { logger } from '../utils/logger.js'
 
 const MessageSchema = z.object({
-  type: z.enum(['command', 'ping']),
+  type: z.enum(['command', 'ping', 'pty-input', 'pty-resize']),
   payload: z.any()
 })
 
@@ -13,6 +14,7 @@ export class WebSocketServer {
   private wss: WSServer | null = null
   private httpServer: ReturnType<typeof createServer> | null = null
   private clients = new Set<WebSocket>()
+  private ptySessions = new Map<WebSocket, PTYSession>()
 
   constructor(
     private port: number,
@@ -84,6 +86,7 @@ export class WebSocketServer {
 
     ws.on('close', () => {
       logger.info(`Client disconnected: ${clientId}`)
+      this.cleanupPTYSession(ws)
       this.clients.delete(ws)
     })
 
@@ -96,7 +99,13 @@ export class WebSocketServer {
   private async handleMessage(ws: WebSocket, message: z.infer<typeof MessageSchema>) {
     switch (message.type) {
       case 'command':
-        await this.handleCommand(ws, message.payload.command)
+        await this.handleCommand(ws, message.payload.command, message.payload.usePTY)
+        break
+      case 'pty-input':
+        this.handlePTYInput(ws, message.payload.data)
+        break
+      case 'pty-resize':
+        this.handlePTYResize(ws, message.payload.cols, message.payload.rows)
         break
       case 'ping':
         this.sendMessage(ws, { type: 'pong', payload: {} })
@@ -104,26 +113,102 @@ export class WebSocketServer {
     }
   }
 
-  private async handleCommand(ws: WebSocket, command: string) {
-    logger.info(`Executing command: ${command}`)
+  private async handleCommand(ws: WebSocket, command: string, usePTY: boolean = true) {
+    logger.info(`Executing command: ${command} (PTY: ${usePTY})`)
+
+    const [cmd, ...args] = command.trim().split(' ')
+
+    // Zkontrolovat, zda příkaz vyžaduje PTY
+    const needsPTY = usePTY && this.droidBridge.needsPTY(cmd)
+
+    if (needsPTY) {
+      // Použít PTY pro interaktivní příkazy
+      this.startPTYSession(ws, cmd, args)
+    } else {
+      // Použít normální spawn pro jednoduché příkazy
+      try {
+        const result = await this.droidBridge.executeCommand(command)
+        
+        this.sendMessage(ws, {
+          type: 'output',
+          payload: {
+            data: result.stdout,
+            error: result.stderr,
+            exitCode: result.exitCode
+          }
+        })
+      } catch (error: any) {
+        logger.error({ err: error }, 'Command execution failed')
+        this.sendMessage(ws, {
+          type: 'error',
+          payload: { message: error.message || 'Příkaz selhal' }
+        })
+      }
+    }
+  }
+
+  private startPTYSession(ws: WebSocket, command: string, args: string[]): void {
+    // Ukončit existující session
+    this.cleanupPTYSession(ws)
+
+    const sessionId = `session-${Date.now()}`
+    const ptySession = new PTYSession(sessionId)
 
     try {
-      const result = await this.droidBridge.executeCommand(command)
+      ptySession.start(command, args, {
+        cols: 80,
+        rows: 24
+      })
+
+      ptySession.onData((data) => {
+        this.sendMessage(ws, {
+          type: 'pty-output',
+          payload: { data }
+        })
+      })
+
+      ptySession.onExit((exitCode) => {
+        this.sendMessage(ws, {
+          type: 'pty-exit',
+          payload: { exitCode }
+        })
+        this.ptySessions.delete(ws)
+      })
+
+      this.ptySessions.set(ws, ptySession)
       
       this.sendMessage(ws, {
-        type: 'output',
-        payload: {
-          data: result.stdout,
-          error: result.stderr,
-          exitCode: result.exitCode
-        }
+        type: 'pty-started',
+        payload: { sessionId }
       })
     } catch (error: any) {
-      logger.error({ err: error }, 'Command execution failed')
+      logger.error({ err: error }, 'Failed to start PTY session')
       this.sendMessage(ws, {
         type: 'error',
-        payload: { message: error.message || 'Příkaz selhal' }
+        payload: { message: `Nepodařilo se spustit PTY: ${error.message}` }
       })
+    }
+  }
+
+  private handlePTYInput(ws: WebSocket, data: string): void {
+    const session = this.ptySessions.get(ws)
+    if (session) {
+      session.write(data)
+    }
+  }
+
+  private handlePTYResize(ws: WebSocket, cols: number, rows: number): void {
+    const session = this.ptySessions.get(ws)
+    if (session) {
+      session.resize(cols, rows)
+    }
+  }
+
+  private cleanupPTYSession(ws: WebSocket): void {
+    const session = this.ptySessions.get(ws)
+    if (session) {
+      session.kill()
+      this.ptySessions.delete(ws)
     }
   }
 

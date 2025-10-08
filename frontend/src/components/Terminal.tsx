@@ -6,19 +6,23 @@ import '@xterm/xterm/css/xterm.css'
 
 interface TerminalProps {
   isConnected: boolean
-  onCommand: (command: string) => void
+  onCommand: (command: string, usePTY?: boolean) => void
+  onPTYInput?: (data: string) => void
+  onPTYResize?: (cols: number, rows: number) => void
 }
 
 export interface TerminalHandle {
   writeOutput: (data: string) => void
   writeError: (data: string) => void
+  exitPTYMode: () => void
 }
 
-const Terminal = forwardRef<TerminalHandle, TerminalProps>(({ isConnected, onCommand }, ref) => {
+const Terminal = forwardRef<TerminalHandle, TerminalProps>(({ isConnected, onCommand, onPTYInput, onPTYResize }, ref) => {
   const terminalRef = useRef<HTMLDivElement>(null)
   const xtermRef = useRef<XTerm | null>(null)
   const fitAddonRef = useRef<FitAddon | null>(null)
   const commandBufferRef = useRef<string>('')
+  const ptyModeRef = useRef<boolean>(false)
 
   useEffect(() => {
     if (!terminalRef.current) return
@@ -72,12 +76,26 @@ const Terminal = forwardRef<TerminalHandle, TerminalProps>(({ isConnected, onCom
     xterm.writeln('')
 
     xterm.onData((data) => {
+      // PTY režim - přeposlat vše na server
+      if (ptyModeRef.current && onPTYInput) {
+        onPTYInput(data)
+        return
+      }
+
+      // Normální režim - lokální zpracování
       const code = data.charCodeAt(0)
       
       if (code === 13) { // Enter
         xterm.write('\r\n')
         const command = commandBufferRef.current.trim()
         if (command && isConnected) {
+          // Detekce PTY příkazů
+          const needsPTY = ['droid', 'vim', 'nano', 'top', 'htop'].some(cmd => 
+            command.startsWith(cmd)
+          )
+          if (needsPTY) {
+            ptyModeRef.current = true
+          }
           onCommand(command)
         } else if (!command) {
           xterm.write('\x1b[1;32m➜\x1b[0m ')
@@ -96,6 +114,9 @@ const Terminal = forwardRef<TerminalHandle, TerminalProps>(({ isConnected, onCom
 
     const handleResize = () => {
       fitAddon.fit()
+      if (onPTYResize && xtermRef.current) {
+        onPTYResize(xterm.cols, xterm.rows)
+      }
     }
 
     window.addEventListener('resize', handleResize)
@@ -116,6 +137,9 @@ const Terminal = forwardRef<TerminalHandle, TerminalProps>(({ isConnected, onCom
       if (xtermRef.current && data) {
         xtermRef.current.write(`\x1b[31m${data}\x1b[0m`)
       }
+    },
+    exitPTYMode: () => {
+      ptyModeRef.current = false
     }
   }))
 

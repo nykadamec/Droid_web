@@ -83,15 +83,35 @@ export function useWebSocket(onMessage?: MessageHandler) {
     setStatus('disconnected')
   }, [])
 
-  const sendCommand = useCallback((command: string) => {
+  const sendCommand = useCallback((command: string, usePTY: boolean = true) => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
-      const message: WebSocketMessage = {
+      const message = {
         type: 'command',
-        payload: { command }
+        payload: { command, usePTY }
       }
       wsRef.current.send(JSON.stringify(message))
     } else {
       console.warn('WebSocket is not connected')
+    }
+  }, [])
+
+  const sendPTYInput = useCallback((data: string) => {
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      const message = {
+        type: 'pty-input',
+        payload: { data }
+      }
+      wsRef.current.send(JSON.stringify(message))
+    }
+  }, [])
+
+  const sendPTYResize = useCallback((cols: number, rows: number) => {
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      const message = {
+        type: 'pty-resize',
+        payload: { cols, rows }
+      }
+      wsRef.current.send(JSON.stringify(message))
     }
   }, [])
 
@@ -123,6 +143,8 @@ export function useWebSocket(onMessage?: MessageHandler) {
     status,
     connect,
     disconnect,
-    sendCommand
+    sendCommand,
+    sendPTYInput,
+    sendPTYResize
   }
 }

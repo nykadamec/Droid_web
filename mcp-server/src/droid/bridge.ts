@@ -19,8 +19,8 @@ export class DroidBridge {
     'cat'
   ])
 
-  // Příkazy které vyžadují TTY/interaktivní režim (nelze spustit přes spawn)
-  private ttyRequiredCommands = new Set(['droid'])
+  // Příkazy které vyžadují TTY/interaktivní režim
+  private ttyRequiredCommands = new Set(['droid', 'vim', 'nano', 'top', 'htop'])
 
   async executeCommand(command: string): Promise<CommandResult> {
     const [cmd, ...args] = command.trim().split(' ')
@@ -39,19 +39,6 @@ export class DroidBridge {
         stdout: this.getHelpText(),
         stderr: '',
         exitCode: 0
-      }
-    }
-
-    // Kontrola TTY požadavků
-    if (this.ttyRequiredCommands.has(cmd)) {
-      return {
-        stdout: '',
-        stderr: `❌ Příkaz "${cmd}" vyžaduje interaktivní terminál (TTY).\n\n` +
-                `💡 Web terminál nepodporuje plně interaktivní CLI aplikace.\n` +
-                `   Pro použití Droid CLI:\n` +
-                `   1. Použijte lokální terminál: droid chat\n` +
-                `   2. Nebo zkuste: droid --help\n`,
-        exitCode: 1
       }
     }
 
@@ -123,6 +110,10 @@ export class DroidBridge {
     return Array.from(this.allowedCommands)
   }
 
+  needsPTY(cmd: string): boolean {
+    return this.ttyRequiredCommands.has(cmd)
+  }
+
   private getHelpText(): string {
     return `
 ╭─ Dostupné příkazy ──────────────────────────────╮
@@ -138,9 +129,12 @@ export class DroidBridge {
 \x1b[1;33mInformace:\x1b[0m
   help         Zobrazit tuto nápovědu
 
-\x1b[90mPoznámka: Interaktivní příkazy (jako droid CLI) 
-nejsou podporovány ve web terminálu.
-Pro plný přístup k Droid CLI použijte lokální terminál.\x1b[0m
+\x1b[1;33mInteraktivní příkazy:\x1b[0m
+  droid        Factory Droid CLI (plná TTY podpora)
+  vim, nano    Textové editory
+  top, htop    System monitoring
+
+\x1b[90m💡 Interaktivní příkazy běží v PTY režimu pro plnou podporu.\x1b[0m
 
 ╰─────────────────────────────────────────────────╯
 `
