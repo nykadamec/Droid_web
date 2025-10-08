@@ -37,7 +37,7 @@ export function useWebSocket(onMessage?: MessageHandler) {
     setStatus('connecting')
     
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-    const wsUrl = `${protocol}//${window.location.hostname}:8080/ws`
+    const wsUrl = `${protocol}//${window.location.hostname}:8000/ws`
 
     try {
       const ws = new WebSocket(wsUrl)

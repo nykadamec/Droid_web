@@ -2,7 +2,7 @@ import { WebSocketServer } from './websocket/server.js'
 import { DroidBridge } from './droid/bridge.js'
 import { logger } from './utils/logger.js'
 
-const PORT = process.env.PORT ? parseInt(process.env.PORT) : 8080
+const PORT = process.env.PORT ? parseInt(process.env.PORT) : 8000
 
 async function main() {
   logger.info('🚀 Starting Droid MCP Server...')
