@@ -1,0 +1,34 @@
+version: '3.8'
+
+services:
+  mcp-server:
+    build:
+      context: ./mcp-server
+      dockerfile: Dockerfile
+    container_name: droid-mcp-server
+    ports:
+      - "8080:8080"
+    environment:
+      - NODE_ENV=production
+      - PORT=8080
+      - LOG_LEVEL=info
+    restart: unless-stopped
+    networks:
+      - droid-network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: droid-frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - mcp-server
+    restart: unless-stopped
+    networks:
+      - droid-network
+
+networks:
+  droid-network:
+    driver: bridge
