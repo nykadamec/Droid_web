@@ -87,6 +87,33 @@ const Terminal = forwardRef<TerminalHandle, TerminalProps>(({ isConnected, onCom
         return
       }
 
+      // Detekce ANSI escape sekvencí pro šipky PŘED normálním zpracováním
+      if (data === '\x1b[A') { // Arrow Up
+        if (showSuggestions) {
+          const suggestions = (window as any).__commandSuggestions || []
+          if (suggestions.length > 0) {
+            setSuggestionIndex(prev => (prev - 1 + suggestions.length) % suggestions.length)
+          }
+          return
+        }
+      } else if (data === '\x1b[B') { // Arrow Down
+        if (showSuggestions) {
+          const suggestions = (window as any).__commandSuggestions || []
+          if (suggestions.length > 0) {
+            setSuggestionIndex(prev => (prev + 1) % suggestions.length)
+          }
+          return
+        }
+      } else if (data === '\t' || data === '\x09') { // Tab
+        if (showSuggestions) {
+          const suggestions = (window as any).__commandSuggestions || []
+          if (suggestions.length > 0 && suggestionIndex < suggestions.length) {
+            handleSuggestionSelect(suggestions[suggestionIndex])
+          }
+          return
+        }
+      }
+
       // Normální režim - lokální zpracování
       const code = data.charCodeAt(0)
       
@@ -121,32 +148,6 @@ const Terminal = forwardRef<TerminalHandle, TerminalProps>(({ isConnected, onCom
           setShowSuggestions(firstWord.length > 0)
           setSuggestionIndex(0)
         }
-      } else if (code === 38) { // Arrow Up
-        if (showSuggestions) {
-          const suggestions = (window as any).__commandSuggestions || []
-          if (suggestions.length > 0) {
-            setSuggestionIndex(prev => (prev - 1 + suggestions.length) % suggestions.length)
-          }
-          return // Nepsat do terminálu
-        }
-      } else if (code === 40) { // Arrow Down
-        if (showSuggestions) {
-          const suggestions = (window as any).__commandSuggestions || []
-          if (suggestions.length > 0) {
-            setSuggestionIndex(prev => (prev + 1) % suggestions.length)
-          }
-          return // Nepsat do terminálu
-        }
-      } else if (code === 9) { // Tab
-        // Pokud jsou suggestions viditelné, dokončit příkaz
-        if (showSuggestions) {
-          const suggestions = (window as any).__commandSuggestions || []
-          if (suggestions.length > 0 && suggestionIndex < suggestions.length) {
-            handleSuggestionSelect(suggestions[suggestionIndex])
-          }
-        }
-        // Nepsat tab do terminálu
-        return
       } else if (code >= 32) { // Printable characters
         commandBufferRef.current += data
         xterm.write(data)
@@ -160,13 +161,20 @@ const Terminal = forwardRef<TerminalHandle, TerminalProps>(({ isConnected, onCom
     })
 
     const handleResize = () => {
-      fitAddon.fit()
-      if (onPTYResize && xtermRef.current) {
-        onPTYResize(xterm.cols, xterm.rows)
+      try {
+        fitAddon.fit()
+        if (onPTYResize && xtermRef.current) {
+          onPTYResize(xterm.cols, xterm.rows)
+        }
+      } catch (error) {
+        console.warn('Fit addon resize error:', error)
       }
     }
 
     window.addEventListener('resize', handleResize)
+    
+    // Initial fit s mírným zpožděním aby se DOM stihl naloadovat
+    setTimeout(() => handleResize(), 100)
 
     return () => {
       window.removeEventListener('resize', handleResize)
