@@ -4,7 +4,7 @@ interface CommandSuggestionsProps {
   input: string
   onSelect: (command: string) => void
   visible: boolean
-  onNavigate?: (direction: 'up' | 'down') => void
+  selectedIndex: number
 }
 
 // Seznam dostupných příkazů
@@ -55,21 +55,12 @@ const AVAILABLE_COMMANDS = [
   'rsync'
 ].sort()
 
-export default function CommandSuggestions({ input, onSelect, visible, onNavigate }: CommandSuggestionsProps) {
+export default function CommandSuggestions({ input, onSelect, visible, selectedIndex }: CommandSuggestionsProps) {
   const [suggestions, setSuggestions] = useState<string[]>([])
-  const [selectedIndex, setSelectedIndex] = useState(0)
-
-  // Export aktuálně vybraný příkaz pro parent
-  useEffect(() => {
-    if (suggestions.length > 0 && visible) {
-      // Parent může získat vybraný příkaz
-    }
-  }, [selectedIndex, suggestions, visible])
 
   useEffect(() => {
     if (!input || !visible) {
       setSuggestions([])
-      setSelectedIndex(0)
       return
     }
 
@@ -79,46 +70,16 @@ export default function CommandSuggestions({ input, onSelect, visible, onNavigat
     )
 
     setSuggestions(filtered)
-    setSelectedIndex(0)
   }, [input, visible])
 
-  // Veřejná metoda pro získání aktuálně vybraného příkazu
-  const getSelectedCommand = () => {
-    if (suggestions.length > 0) {
-      return suggestions[selectedIndex]
-    }
-    return null
-  }
-
-  // Export metody přes useEffect a callback
-  useEffect(() => {
-    // Přidat metodu na window pro přístup z Terminalu
-    if (visible && suggestions.length > 0) {
-      (window as any).__commandSuggestionSelected = getSelectedCommand()
-    } else {
-      (window as any).__commandSuggestionSelected = null
-    }
-  }, [selectedIndex, suggestions, visible])
-
-  const handleNavigate = (direction: 'up' | 'down') => {
-    if (direction === 'down') {
-      setSelectedIndex(prev => (prev + 1) % suggestions.length)
-    } else {
-      setSelectedIndex(prev => (prev - 1 + suggestions.length) % suggestions.length)
-    }
-    onNavigate?.(direction)
-  }
-
-  // Expose navigation via window for Terminal component
+  // Export suggestions list přes window pro Terminal
   useEffect(() => {
     if (visible && suggestions.length > 0) {
-      (window as any).__commandSuggestionNavigate = handleNavigate;
-      (window as any).__commandSuggestionComplete = () => onSelect(suggestions[selectedIndex])
+      (window as any).__commandSuggestions = suggestions
     } else {
-      (window as any).__commandSuggestionNavigate = null;
-      (window as any).__commandSuggestionComplete = null
+      (window as any).__commandSuggestions = []
     }
-  }, [visible, suggestions, selectedIndex, onSelect, handleNavigate])
+  }, [suggestions, visible])
 
   if (!visible || suggestions.length === 0) {
     return null

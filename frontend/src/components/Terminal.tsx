@@ -27,6 +27,7 @@ const Terminal = forwardRef<TerminalHandle, TerminalProps>(({ isConnected, onCom
   const ptyModeRef = useRef<boolean>(false)
   const [commandInput, setCommandInput] = useState('')
   const [showSuggestions, setShowSuggestions] = useState(false)
+  const [suggestionIndex, setSuggestionIndex] = useState(0)
 
   useEffect(() => {
     if (!terminalRef.current) return
@@ -108,6 +109,7 @@ const Terminal = forwardRef<TerminalHandle, TerminalProps>(({ isConnected, onCom
         commandBufferRef.current = ''
         setCommandInput('')
         setShowSuggestions(false)
+        setSuggestionIndex(0)
       } else if (code === 127) { // Backspace
         if (commandBufferRef.current.length > 0) {
           commandBufferRef.current = commandBufferRef.current.slice(0, -1)
@@ -117,11 +119,31 @@ const Terminal = forwardRef<TerminalHandle, TerminalProps>(({ isConnected, onCom
           const firstWord = commandBufferRef.current.split(' ')[0]
           setCommandInput(firstWord)
           setShowSuggestions(firstWord.length > 0)
+          setSuggestionIndex(0)
+        }
+      } else if (code === 38) { // Arrow Up
+        if (showSuggestions) {
+          const suggestions = (window as any).__commandSuggestions || []
+          if (suggestions.length > 0) {
+            setSuggestionIndex(prev => (prev - 1 + suggestions.length) % suggestions.length)
+          }
+          return // Nepsat do terminálu
+        }
+      } else if (code === 40) { // Arrow Down
+        if (showSuggestions) {
+          const suggestions = (window as any).__commandSuggestions || []
+          if (suggestions.length > 0) {
+            setSuggestionIndex(prev => (prev + 1) % suggestions.length)
+          }
+          return // Nepsat do terminálu
         }
       } else if (code === 9) { // Tab
         // Pokud jsou suggestions viditelné, dokončit příkaz
-        if (showSuggestions && typeof (window as any).__commandSuggestionComplete === 'function') {
-          (window as any).__commandSuggestionComplete()
+        if (showSuggestions) {
+          const suggestions = (window as any).__commandSuggestions || []
+          if (suggestions.length > 0 && suggestionIndex < suggestions.length) {
+            handleSuggestionSelect(suggestions[suggestionIndex])
+          }
         }
         // Nepsat tab do terminálu
         return
@@ -133,6 +155,7 @@ const Terminal = forwardRef<TerminalHandle, TerminalProps>(({ isConnected, onCom
         const firstWord = commandBufferRef.current.split(' ')[0]
         setCommandInput(firstWord)
         setShowSuggestions(firstWord.length > 0 && commandBufferRef.current.indexOf(' ') === -1)
+        setSuggestionIndex(0)
       }
     })
 
@@ -186,8 +209,8 @@ const Terminal = forwardRef<TerminalHandle, TerminalProps>(({ isConnected, onCom
   const handleSuggestionSelect = (command: string) => {
     if (!xtermRef.current) return
     
-    // Vymazat aktuální input
-    const currentInput = commandBufferRef.current
+    // Vymazat aktuální input (pouze to co bylo napsáno)
+    const currentInput = commandBufferRef.current.split(' ')[0]
     for (let i = 0; i < currentInput.length; i++) {
       xtermRef.current.write('\b \b')
     }
@@ -195,8 +218,9 @@ const Terminal = forwardRef<TerminalHandle, TerminalProps>(({ isConnected, onCom
     // Zapsat vybraný příkaz
     xtermRef.current.write(command)
     commandBufferRef.current = command
-    setCommandInput(command)
+    setCommandInput('')
     setShowSuggestions(false)
+    setSuggestionIndex(0)
   }
 
   return (
@@ -209,6 +233,7 @@ const Terminal = forwardRef<TerminalHandle, TerminalProps>(({ isConnected, onCom
         input={commandInput}
         onSelect={handleSuggestionSelect}
         visible={showSuggestions && !ptyModeRef.current}
+        selectedIndex={suggestionIndex}
       />
     </div>
   )
