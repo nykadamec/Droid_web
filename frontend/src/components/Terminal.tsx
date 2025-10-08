@@ -25,6 +25,8 @@ const Terminal = forwardRef<TerminalHandle, TerminalProps>(({ isConnected, onCom
   const fitAddonRef = useRef<FitAddon | null>(null)
   const commandBufferRef = useRef<string>('')
   const ptyModeRef = useRef<boolean>(false)
+  const showSuggestionsRef = useRef<boolean>(false)
+  const suggestionIndexRef = useRef<number>(0)
   const [commandInput, setCommandInput] = useState('')
   const [showSuggestions, setShowSuggestions] = useState(false)
   const [suggestionIndex, setSuggestionIndex] = useState(0)
@@ -87,28 +89,44 @@ const Terminal = forwardRef<TerminalHandle, TerminalProps>(({ isConnected, onCom
         return
       }
 
+      // Ctrl+C - smazat aktuální input
+      if (data === '\x03') { // Ctrl+C
+        commandBufferRef.current = ''
+        setCommandInput('')
+        setShowSuggestions(false)
+        showSuggestionsRef.current = false
+        setSuggestionIndex(0)
+        suggestionIndexRef.current = 0
+        xterm.write('^C\r\n')
+        return
+      }
+
       // Detekce ANSI escape sekvencí pro šipky PŘED normálním zpracováním
       if (data === '\x1b[A') { // Arrow Up
-        if (showSuggestions) {
+        if (showSuggestionsRef.current) {
           const suggestions = (window as any).__commandSuggestions || []
           if (suggestions.length > 0) {
-            setSuggestionIndex(prev => (prev - 1 + suggestions.length) % suggestions.length)
+            const newIndex = (suggestionIndexRef.current - 1 + suggestions.length) % suggestions.length
+            suggestionIndexRef.current = newIndex
+            setSuggestionIndex(newIndex)
           }
           return
         }
       } else if (data === '\x1b[B') { // Arrow Down
-        if (showSuggestions) {
+        if (showSuggestionsRef.current) {
           const suggestions = (window as any).__commandSuggestions || []
           if (suggestions.length > 0) {
-            setSuggestionIndex(prev => (prev + 1) % suggestions.length)
+            const newIndex = (suggestionIndexRef.current + 1) % suggestions.length
+            suggestionIndexRef.current = newIndex
+            setSuggestionIndex(newIndex)
           }
           return
         }
       } else if (data === '\t' || data === '\x09') { // Tab
-        if (showSuggestions) {
+        if (showSuggestionsRef.current) {
           const suggestions = (window as any).__commandSuggestions || []
-          if (suggestions.length > 0 && suggestionIndex < suggestions.length) {
-            handleSuggestionSelect(suggestions[suggestionIndex])
+          if (suggestions.length > 0 && suggestionIndexRef.current < suggestions.length) {
+            handleSuggestionSelect(suggestions[suggestionIndexRef.current])
           }
           return
         }
@@ -136,27 +154,50 @@ const Terminal = forwardRef<TerminalHandle, TerminalProps>(({ isConnected, onCom
         commandBufferRef.current = ''
         setCommandInput('')
         setShowSuggestions(false)
+        showSuggestionsRef.current = false
         setSuggestionIndex(0)
+        suggestionIndexRef.current = 0
       } else if (code === 127) { // Backspace
         if (commandBufferRef.current.length > 0) {
           commandBufferRef.current = commandBufferRef.current.slice(0, -1)
           xterm.write('\b \b')
           
           // Aktualizovat suggestions
-          const firstWord = commandBufferRef.current.split(' ')[0]
-          setCommandInput(firstWord)
-          setShowSuggestions(firstWord.length > 0)
+          const parts = commandBufferRef.current.split(' ')
+          const firstWord = parts[0]
+          const isCommand = parts.length === 1
+          
+          if (isCommand) {
+            setCommandInput(firstWord)
+            setShowSuggestions(firstWord.length > 0)
+            showSuggestionsRef.current = firstWord.length > 0
+          } else {
+            setShowSuggestions(false)
+            showSuggestionsRef.current = false
+          }
           setSuggestionIndex(0)
+          suggestionIndexRef.current = 0
         }
       } else if (code >= 32) { // Printable characters
         commandBufferRef.current += data
         xterm.write(data)
         
         // Aktualizovat suggestions - pouze pro první slovo (samotný příkaz)
-        const firstWord = commandBufferRef.current.split(' ')[0]
-        setCommandInput(firstWord)
-        setShowSuggestions(firstWord.length > 0 && commandBufferRef.current.indexOf(' ') === -1)
+        const parts = commandBufferRef.current.split(' ')
+        const firstWord = parts[0]
+        const isCommand = parts.length === 1
+        
+        if (isCommand) {
+          setCommandInput(firstWord)
+          const shouldShow = firstWord.length > 0
+          setShowSuggestions(shouldShow)
+          showSuggestionsRef.current = shouldShow
+        } else {
+          setShowSuggestions(false)
+          showSuggestionsRef.current = false
+        }
         setSuggestionIndex(0)
+        suggestionIndexRef.current = 0
       }
     })
 
@@ -228,7 +269,9 @@ const Terminal = forwardRef<TerminalHandle, TerminalProps>(({ isConnected, onCom
     commandBufferRef.current = command
     setCommandInput('')
     setShowSuggestions(false)
+    showSuggestionsRef.current = false
     setSuggestionIndex(0)
+    suggestionIndexRef.current = 0
   }
 
   return (
