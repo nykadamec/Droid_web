@@ -42,9 +42,12 @@ export class SessionManager {
     const session = this.sessions.get(sessionId)
     if (!session) return
 
-    // Přidat data jako string (ne rozdělovat na řádky)
-    // Zachovat ANSI sekvence a formatting
-    session.buffer.push(data)
+    // Převést \n na \r\n pro správné zarovnání v xterm.js
+    // Ale pouze pokud už není \r\n
+    const normalizedData = data.replace(/\r?\n/g, '\r\n')
+    
+    // Přidat data jako string (zachovat ANSI sekvence a formatting)
+    session.buffer.push(normalizedData)
 
     // Omezit velikost bufferu (počet chunks, ne řádků)
     if (session.buffer.length > this.MAX_BUFFER_SIZE / 10) {
