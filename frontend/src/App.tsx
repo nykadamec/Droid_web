@@ -14,8 +14,28 @@ function App() {
     switch (message.type) {
       case 'restore-buffer':
         // Obnovit buffer po reconnectu
-        if (message.payload.data) {
+        if (message.payload.data && terminalRef.current) {
+          // Vyčistit terminál před restore
+          terminalRef.current.clear()
+          
+          // Zapsat buffer (už má správné \r\n z session manageru)
           terminalRef.current.writeOutput(message.payload.data)
+          
+          // Pokud buffer nekončí promptem, přidat ho
+          if (!message.payload.data.endsWith('➜ ')) {
+            terminalRef.current.writeOutput(`\r\n\x1b[1;36m${currentDir}\x1b[0m \x1b[1;32m➜\x1b[0m `)
+          }
+        }
+        break
+      case 'new-session':
+        // Nová session - požádat o welcome zprávy
+        console.log('New session started')
+        sendCommand('', false) // prázdný příkaz jen pro získání promptu
+        break
+      case 'welcome':
+        // Welcome zprávy od serveru
+        if (message.payload.message) {
+          terminalRef.current.writeOutput(message.payload.message)
         }
         break
       case 'session-ready':
@@ -32,14 +52,16 @@ function App() {
           terminalRef.current.writeError(formattedError)
         }
         // Aktualizovat CWD pokud je v odpovědi
+        let newDir = currentDir
         if (message.payload.cwd) {
           // Zkrátit cestu pro zobrazení
           const displayPath = message.payload.cwd.startsWith('/Users/') 
             ? message.payload.cwd.replace(/^\/Users\/[^\/]+/, '~')
             : message.payload.cwd
           setCurrentDir(displayPath)
+          newDir = displayPath
         }
-        terminalRef.current.writeOutput(`\r\n\x1b[1;36m${currentDir}\x1b[0m \x1b[1;32m➜\x1b[0m `)
+        terminalRef.current.writeOutput(`\r\n\x1b[1;36m${newDir}\x1b[0m \x1b[1;32m➜\x1b[0m `)
         break
       case 'pty-output':
         // PTY output už má správné \r\n

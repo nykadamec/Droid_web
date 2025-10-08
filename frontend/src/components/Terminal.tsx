@@ -15,6 +15,7 @@ export interface TerminalHandle {
   writeOutput: (data: string) => void
   writeError: (data: string) => void
   exitPTYMode: () => void
+  clear: () => void
 }
 
 const Terminal = forwardRef<TerminalHandle, TerminalProps>(({ isConnected, onCommand, onPTYInput, onPTYResize }, ref) => {
@@ -140,6 +141,11 @@ const Terminal = forwardRef<TerminalHandle, TerminalProps>(({ isConnected, onCom
     },
     exitPTYMode: () => {
       ptyModeRef.current = false
+    },
+    clear: () => {
+      if (xtermRef.current) {
+        xtermRef.current.clear()
+      }
     }
   }))
 
@@ -147,11 +153,8 @@ const Terminal = forwardRef<TerminalHandle, TerminalProps>(({ isConnected, onCom
     if (!xtermRef.current) return
 
     if (isConnected) {
-      xtermRef.current.writeln('\x1b[32m✅ Připojeno k MCP serveru\x1b[0m')
-      xtermRef.current.writeln('')
-      xtermRef.current.writeln('\x1b[90mZadejte příkaz nebo "help" pro nápovědu\x1b[0m')
-      xtermRef.current.writeln('')
-      xtermRef.current.write('\x1b[1;36m~\x1b[0m \x1b[1;32m➜\x1b[0m ')
+      // Welcome zprávy se zobrazí pouze pro novou session
+      // Pro restore session se zobrazí buffer místo tohoto
     } else {
       xtermRef.current.writeln('\x1b[31m❌ Odpojeno od MCP serveru\x1b[0m')
     }

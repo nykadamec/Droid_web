@@ -7,7 +7,7 @@ import { SessionManager } from '../session/session-manager.js'
 import { logger } from '../utils/logger.js'
 
 const MessageSchema = z.object({
-  type: z.enum(['command', 'ping', 'pty-input', 'pty-resize', 'init-session']),
+  type: z.enum(['command', 'ping', 'pty-input', 'pty-resize', 'init-session', 'request-welcome']),
   payload: z.any()
 })
 
@@ -106,6 +106,15 @@ export class WebSocketServer {
       case 'init-session':
         this.handleInitSession(ws, message.payload.sessionId)
         break
+      case 'request-welcome':
+        // Poslat welcome zprávy pro novou session
+        this.sendMessage(ws, {
+          type: 'welcome',
+          payload: {
+            message: '\x1b[32m✅ Připojeno k MCP serveru\x1b[0m\r\n\r\n\x1b[90mZadejte příkaz nebo "help" pro nápovědu\x1b[0m\r\n\r\n\x1b[1;36m~\x1b[0m \x1b[1;32m➜\x1b[0m '
+          }
+        })
+        break
       case 'command':
         await this.handleCommand(ws, message.payload.command, message.payload.usePTY)
         break
@@ -132,12 +141,18 @@ export class WebSocketServer {
     
     // Poslat existující buffer klientovi
     const buffer = this.sessionManager.getBuffer(sessionId)
-    if (buffer) {
+    if (buffer && buffer.trim().length > 0) {
       this.sendMessage(ws, {
         type: 'restore-buffer',
         payload: { data: buffer }
       })
       logger.info(`Restored ${buffer.length} characters of terminal history`)
+    } else {
+      // Nový session - poslat welcome zprávu
+      this.sendMessage(ws, {
+        type: 'new-session',
+        payload: {}
+      })
     }
     
     this.sendMessage(ws, {
@@ -164,11 +179,17 @@ export class WebSocketServer {
         
         const cwd = result.cwd || this.droidBridge.getCurrentWorkingDirectory()
         
-        // Uložit output do session bufferu
+        // Uložit output do session bufferu (SessionManager normalizuje \n -> \r\n)
         const sessionId = this.clientSessions.get(ws)
         if (sessionId) {
-          if (result.stdout) this.sessionManager.appendToBuffer(sessionId, result.stdout)
-          if (result.stderr) this.sessionManager.appendToBuffer(sessionId, result.stderr)
+          if (result.stdout) {
+            this.sessionManager.appendToBuffer(sessionId, result.stdout)
+          }
+          if (result.stderr) {
+            this.sessionManager.appendToBuffer(sessionId, result.stderr)
+          }
+          // Uložit i prompt s CWD
+          this.sessionManager.appendToBuffer(sessionId, `\r\n\x1b[1;36m${cwd.replace(/^\/Users\/[^\/]+/, '~')}\x1b[0m \x1b[1;32m➜\x1b[0m `)
         }
         
         this.sendMessage(ws, {

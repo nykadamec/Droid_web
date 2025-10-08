@@ -42,13 +42,13 @@ export class SessionManager {
     const session = this.sessions.get(sessionId)
     if (!session) return
 
-    // Rozdělit data na řádky a přidat do bufferu
-    const lines = data.split('\n')
-    session.buffer.push(...lines)
+    // Přidat data jako string (ne rozdělovat na řádky)
+    // Zachovat ANSI sekvence a formatting
+    session.buffer.push(data)
 
-    // Omezit velikost bufferu
-    if (session.buffer.length > session.maxBufferSize) {
-      session.buffer = session.buffer.slice(-session.maxBufferSize)
+    // Omezit velikost bufferu (počet chunks, ne řádků)
+    if (session.buffer.length > this.maxBufferSize / 10) {
+      session.buffer = session.buffer.slice(-(this.maxBufferSize / 10))
     }
 
     session.lastActivity = new Date()
@@ -58,7 +58,8 @@ export class SessionManager {
     const session = this.sessions.get(sessionId)
     if (!session) return ''
     
-    return session.buffer.join('\n')
+    // Spojit buffer bez extra newlines
+    return session.buffer.join('')
   }
 
   clearBuffer(sessionId: string): void {
