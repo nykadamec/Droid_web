@@ -129,12 +129,14 @@ export class WebSocketServer {
       try {
         const result = await this.droidBridge.executeCommand(command)
         
+        const cwd = result.cwd || this.droidBridge.getCurrentWorkingDirectory()
         this.sendMessage(ws, {
           type: 'output',
           payload: {
             data: result.stdout,
             error: result.stderr,
-            exitCode: result.exitCode
+            exitCode: result.exitCode,
+            cwd: cwd
           }
         })
       } catch (error: any) {

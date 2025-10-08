@@ -5,6 +5,7 @@ import { useWebSocket } from './hooks/useWebSocket'
 
 function App() {
   const [isConnected, setIsConnected] = useState(false)
+  const [currentDir, setCurrentDir] = useState('~')
   const terminalRef = useRef<TerminalHandle>(null)
 
   const handleMessage = useCallback((message: any) => {
@@ -21,7 +22,15 @@ function App() {
           const formattedError = message.payload.error.replace(/\n/g, '\r\n')
           terminalRef.current.writeError(formattedError)
         }
-        terminalRef.current.writeOutput('\r\n\x1b[1;32m➜\x1b[0m ')
+        // Aktualizovat CWD pokud je v odpovědi
+        if (message.payload.cwd) {
+          // Zkrátit cestu pro zobrazení
+          const displayPath = message.payload.cwd.startsWith('/Users/') 
+            ? message.payload.cwd.replace(/^\/Users\/[^\/]+/, '~')
+            : message.payload.cwd
+          setCurrentDir(displayPath)
+        }
+        terminalRef.current.writeOutput(`\r\n\x1b[1;36m${currentDir}\x1b[0m \x1b[1;32m➜\x1b[0m `)
         break
       case 'pty-output':
         // PTY output už má správné \r\n
@@ -33,13 +42,13 @@ function App() {
       case 'pty-exit':
         terminalRef.current.exitPTYMode()
         terminalRef.current.writeOutput('\r\n\x1b[90m[Process exited with code ' + message.payload.exitCode + ']\x1b[0m\r\n')
-        terminalRef.current.writeOutput('\x1b[1;32m➜\x1b[0m ')
+        terminalRef.current.writeOutput(`\x1b[1;36m${currentDir}\x1b[0m \x1b[1;32m➜\x1b[0m `)
         break
       case 'error':
-        terminalRef.current.writeError(`\r\n${message.payload.message}\r\n\x1b[1;32m➜\x1b[0m `)
+        terminalRef.current.writeError(`\r\n${message.payload.message}\r\n\x1b[1;36m${currentDir}\x1b[0m \x1b[1;32m➜\x1b[0m `)
         break
     }
-  }, [])
+  }, [currentDir])
 
   const { status, connect, disconnect, sendCommand, sendPTYInput, sendPTYResize } = useWebSocket(handleMessage)
 

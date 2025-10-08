@@ -28,7 +28,7 @@ export class PTYSession {
       name: 'xterm-256color',
       cols: options.cols || 80,
       rows: options.rows || 24,
-      cwd: options.cwd || process.cwd(),
+      cwd: options.cwd || process.env.HOME || process.cwd(),
       env: {
         ...process.env,
         ...options.env,

@@ -5,22 +5,15 @@ interface CommandResult {
   stdout: string
   stderr: string
   exitCode: number | null
+  cwd?: string
 }
 
 export class DroidBridge {
-  private allowedCommands = new Set([
-    'droid',
-    'help',
-    'ls',
-    'pwd',
-    'whoami',
-    'date',
-    'echo',
-    'cat'
-  ])
-
   // Příkazy které vyžadují TTY/interaktivní režim
   private ttyRequiredCommands = new Set(['droid', 'vim', 'nano', 'top', 'htop'])
+  
+  // Aktuální pracovní adresář  
+  private currentWorkingDirectory: string = process.cwd()
 
   async executeCommand(command: string): Promise<CommandResult> {
     const [cmd, ...args] = command.trim().split(' ')
@@ -29,8 +22,9 @@ export class DroidBridge {
       throw new Error('Prázdný příkaz')
     }
 
-    if (!this.isCommandAllowed(cmd)) {
-      throw new Error(`Příkaz "${cmd}" není povolen. Povolené: ${Array.from(this.allowedCommands).join(', ')}`)
+    // Speciální příkaz: cd
+    if (cmd === 'cd') {
+      return this.handleCd(args)
     }
 
     // Speciální příkaz: help
@@ -38,7 +32,8 @@ export class DroidBridge {
       return {
         stdout: this.getHelpText(),
         stderr: '',
-        exitCode: 0
+        exitCode: 0,
+        cwd: this.currentWorkingDirectory
       }
     }
 
@@ -50,6 +45,7 @@ export class DroidBridge {
     return new Promise((resolve, reject) => {
       const child: ChildProcess = spawn(cmd, args, {
         shell: true,
+        cwd: this.currentWorkingDirectory,
         env: {
           ...process.env,
           PATH: enhancedPath,
@@ -79,7 +75,8 @@ export class DroidBridge {
         resolve({
           stdout,
           stderr,
-          exitCode
+          exitCode,
+          cwd: this.currentWorkingDirectory
         })
       })
 
@@ -92,22 +89,65 @@ export class DroidBridge {
     })
   }
 
-  private isCommandAllowed(cmd: string): boolean {
-    return this.allowedCommands.has(cmd)
+  getCurrentWorkingDirectory(): string {
+    return this.currentWorkingDirectory
   }
 
-  addAllowedCommand(cmd: string): void {
-    this.allowedCommands.add(cmd)
-    logger.info(`Added allowed command: ${cmd}`)
-  }
-
-  removeAllowedCommand(cmd: string): void {
-    this.allowedCommands.delete(cmd)
-    logger.info(`Removed allowed command: ${cmd}`)
-  }
-
-  getAllowedCommands(): string[] {
-    return Array.from(this.allowedCommands)
+  private handleCd(args: string[]): CommandResult {
+    const targetDir = args[0] || process.env.HOME || '~'
+    
+    try {
+      // Expandovat ~ na home directory
+      const expandedDir = targetDir.startsWith('~') 
+        ? targetDir.replace('~', process.env.HOME || '')
+        : targetDir
+      
+      // Resolve relative paths
+      const resolvedDir = expandedDir.startsWith('/')
+        ? expandedDir
+        : `${this.currentWorkingDirectory}/${expandedDir}`
+      
+      // Normalize path
+      const normalizedPath = require('path').resolve(resolvedDir)
+      
+      // Zkontrolovat, že adresář existuje
+      const fs = require('fs')
+      if (!fs.existsSync(normalizedPath)) {
+        return {
+          stdout: '',
+          stderr: `cd: no such file or directory: ${targetDir}\n`,
+          exitCode: 1,
+          cwd: this.currentWorkingDirectory
+        }
+      }
+      
+      if (!fs.statSync(normalizedPath).isDirectory()) {
+        return {
+          stdout: '',
+          stderr: `cd: not a directory: ${targetDir}\n`,
+          exitCode: 1,
+          cwd: this.currentWorkingDirectory
+        }
+      }
+      
+      // Změnit aktuální adresář
+      this.currentWorkingDirectory = normalizedPath
+      logger.info(`Changed directory to: ${this.currentWorkingDirectory}`)
+      
+      return {
+        stdout: '',
+        stderr: '',
+        exitCode: 0,
+        cwd: this.currentWorkingDirectory
+      }
+    } catch (error: any) {
+      return {
+        stdout: '',
+        stderr: `cd: ${error.message}\n`,
+        exitCode: 1,
+        cwd: this.currentWorkingDirectory
+      }
+    }
   }
 
   needsPTY(cmd: string): boolean {
@@ -118,16 +158,21 @@ export class DroidBridge {
     return `
 ╭─ Dostupné příkazy ──────────────────────────────╮
 
-\x1b[1;33mSystémové příkazy:\x1b[0m
-  ls           Seznam souborů a složek
+\x1b[1;33mNavigace:\x1b[0m
+  cd <dir>     Změnit adresář
   pwd          Zobrazit aktuální adresář
+  ls           Seznam souborů a složek
+
+\x1b[1;33mSystémové příkazy:\x1b[0m
   whoami       Zobrazit aktuálního uživatele
   date         Zobrazit datum a čas
   echo         Vypsat text
   cat          Zobrazit obsah souboru
-
+  
 \x1b[1;33mInformace:\x1b[0m
   help         Zobrazit tuto nápovědu
+  
+\x1b[32m✅ Full system access - všechny příkazy jsou povoleny\x1b[0m
 
 \x1b[1;33mInteraktivní příkazy:\x1b[0m
   droid        Factory Droid CLI (plná TTY podpora)

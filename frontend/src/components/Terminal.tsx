@@ -98,7 +98,7 @@ const Terminal = forwardRef<TerminalHandle, TerminalProps>(({ isConnected, onCom
           }
           onCommand(command)
         } else if (!command) {
-          xterm.write('\x1b[1;32m➜\x1b[0m ')
+          xterm.write('\x1b[1;36m~\x1b[0m \x1b[1;32m➜\x1b[0m ')
         }
         commandBufferRef.current = ''
       } else if (code === 127) { // Backspace
@@ -151,7 +151,7 @@ const Terminal = forwardRef<TerminalHandle, TerminalProps>(({ isConnected, onCom
       xtermRef.current.writeln('')
       xtermRef.current.writeln('\x1b[90mZadejte příkaz nebo "help" pro nápovědu\x1b[0m')
       xtermRef.current.writeln('')
-      xtermRef.current.write('\x1b[1;32m➜\x1b[0m ')
+      xtermRef.current.write('\x1b[1;36m~\x1b[0m \x1b[1;32m➜\x1b[0m ')
     } else {
       xtermRef.current.writeln('\x1b[31m❌ Odpojeno od MCP serveru\x1b[0m')
     }
