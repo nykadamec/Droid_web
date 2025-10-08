@@ -1,4 +1,6 @@
 import { spawn, ChildProcess } from 'child_process'
+import { resolve } from 'path'
+import { existsSync, statSync } from 'fs'
 import { logger } from '../utils/logger.js'
 
 interface CommandResult {
@@ -108,11 +110,10 @@ export class DroidBridge {
         : `${this.currentWorkingDirectory}/${expandedDir}`
       
       // Normalize path
-      const normalizedPath = require('path').resolve(resolvedDir)
+      const normalizedPath = resolve(resolvedDir)
       
       // Zkontrolovat, že adresář existuje
-      const fs = require('fs')
-      if (!fs.existsSync(normalizedPath)) {
+      if (!existsSync(normalizedPath)) {
         return {
           stdout: '',
           stderr: `cd: no such file or directory: ${targetDir}\n`,
@@ -121,7 +122,7 @@ export class DroidBridge {
         }
       }
       
-      if (!fs.statSync(normalizedPath).isDirectory()) {
+      if (!statSync(normalizedPath).isDirectory()) {
         return {
           stdout: '',
           stderr: `cd: not a directory: ${targetDir}\n`,
