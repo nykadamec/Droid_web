@@ -152,6 +152,24 @@ const Terminal = forwardRef<TerminalHandle, TerminalProps>(({ isConnected, curre
       // Normální režim - lokální zpracování
       const code = data.charCodeAt(0)
       
+      // DŮLEŽITÉ: Zkontrolovat buffer updates PŘED zpracováním jakéhokoli inputu!
+      const win = window as any
+      
+      // Force update z file completion (více matches)
+      if (win.__forceUpdateBuffer) {
+        commandBufferRef.current = win.__forceUpdateBuffer
+        win.__forceUpdateBuffer = null
+        win.__currentCommandBuffer = null
+        win.__updatedCommandBuffer = null
+      }
+      
+      // Single match update z file completion
+      if (win.__updatedCommandBuffer) {
+        commandBufferRef.current = win.__updatedCommandBuffer
+        win.__updatedCommandBuffer = null
+        win.__currentCommandBuffer = null
+      }
+      
       if (code === 13) { // Enter
         xterm.write('\r\n')
         const command = commandBufferRef.current.trim()
@@ -195,27 +213,10 @@ const Terminal = forwardRef<TerminalHandle, TerminalProps>(({ isConnected, curre
           setSuggestionIndex(0)
           suggestionIndexRef.current = 0
         }
-      }
-      
-      // Zkontrolovat force update bufferu (po zobrazení file completion matches)
-      const win = window as any
-      if (win.__forceUpdateBuffer) {
-        commandBufferRef.current = win.__forceUpdateBuffer
-        win.__forceUpdateBuffer = null
-        win.__currentCommandBuffer = null
-        win.__updatedCommandBuffer = null
-      }
-      
-      if (code >= 32) { // Printable characters
-        // Zkontrolovat jestli nemáme updated buffer z file completion
-        if ((window as any).__updatedCommandBuffer) {
-          commandBufferRef.current = (window as any).__updatedCommandBuffer
-          ;(window as any).__updatedCommandBuffer = null
-          ;(window as any).__currentCommandBuffer = null
-        } else {
-          commandBufferRef.current += data
-          xterm.write(data)
-        }
+      } else if (code >= 32) { // Printable characters
+        // Buffer updates už byly zpracovány výše
+        commandBufferRef.current += data
+        xterm.write(data)
         
         // Aktualizovat suggestions - pouze pro první slovo (samotný příkaz)
         const parts = commandBufferRef.current.split(' ')
