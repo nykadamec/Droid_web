@@ -1,0 +1,18 @@
+tunnel: webterm
+credentials-file: /Users/nykadamec/.cloudflared/webterm.json
+
+ingress:
+  # HTTPS Frontend
+  - hostname: webterm.nykadamec.dev
+    service: https://localhost:3000
+    originRequest:
+      noTLSVerify: true
+  
+  # WebSocket Server
+  - hostname: ws.webterm.nykadamec.dev
+    service: http://localhost:8000
+    originRequest:
+      noTLSVerify: true
+  
+  # Catch-all rule (required)
+  - service: http_status:404

@@ -1,0 +1,24 @@
+# Cloudflare Tunnel Credentials Location
+
+Po spuštění `cloudflared tunnel create webterm` se vytvoří soubor:
+~/.cloudflared/webterm.json
+
+Tento soubor obsahuje credentials pro tunnel a NIKDY by neměl být commitnut do gitu!
+
+## Setup:
+
+1. Vytvoř tunnel:
+   cloudflared tunnel create webterm
+
+2. Credentials se automaticky uloží do:
+   ~/.cloudflared/webterm.json
+
+3. Zkopíruj config:
+   cp cloudflared.yml ~/.cloudflared/config.yml
+
+4. Nastav DNS:
+   cloudflared tunnel route dns webterm webterm.nykadamec.dev
+   cloudflared tunnel route dns webterm ws.webterm.nykadamec.dev
+
+5. Spusť tunnel:
+   npm run tunnel

@@ -11,7 +11,9 @@
     "build": "npm run build:server && npm run build:frontend",
     "build:frontend": "cd frontend && npm run build",
     "build:server": "cd mcp-server && npm run build",
-    "start:server": "cd mcp-server && npm start"
+    "start:server": "cd mcp-server && npm start",
+    "tunnel": "concurrently \"npm run dev\" \"npm run tunnel:only\"",
+    "tunnel:only": "cloudflared tunnel --config cloudflared.yml run webterm"
   },
   "devDependencies": {
     "concurrently": "^9.2.1"
