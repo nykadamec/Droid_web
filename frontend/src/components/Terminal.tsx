@@ -136,7 +136,7 @@ const Terminal = forwardRef<TerminalHandle, TerminalProps>(({ isConnected, curre
         }
         
         // File/directory completion pro argumenty
-        const currentCmd = commandBufferRef.current
+        const currentCmd = commandBufferRef.current || ''
         const cmdTokens = currentCmd.split(' ')
         if (cmdTokens.length > 1 && onRequestFiles) {
           // Druhé+ slovo = argument (soubor/složka)
@@ -198,8 +198,8 @@ const Terminal = forwardRef<TerminalHandle, TerminalProps>(({ isConnected, curre
           xterm.write('\b \b')
           
           // Aktualizovat suggestions
-          const cmdParts2 = commandBufferRef.current.split(' ')
-          const firstWord = cmdParts2[0]
+          const cmdParts2 = (commandBufferRef.current || '').split(' ')
+          const firstWord = cmdParts2[0] || ''
           const isCommand = cmdParts2.length === 1
           
           if (isCommand) {
@@ -219,8 +219,8 @@ const Terminal = forwardRef<TerminalHandle, TerminalProps>(({ isConnected, curre
         xterm.write(data)
         
         // Aktualizovat suggestions - pouze pro první slovo (samotný příkaz)
-        const parts = commandBufferRef.current.split(' ')
-        const firstWord = parts[0]
+        const parts = (commandBufferRef.current || '').split(' ')
+        const firstWord = parts[0] || ''
         const isCommand = parts.length === 1
         
         if (isCommand) {

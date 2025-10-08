@@ -48,7 +48,7 @@ function App() {
           if (files.length === 1) {
             // Pouze jeden match - dokončit automaticky v terminálu
             const completion = files[0]
-            const bufferParts = currentBuffer.split(' ')
+            const bufferParts = (currentBuffer || '').split(' ')
             
             // Smazat poslední část (prefix)
             const lastBufferPart = bufferParts[bufferParts.length - 1]
