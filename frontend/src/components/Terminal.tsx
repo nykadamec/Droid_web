@@ -118,7 +118,11 @@ const Terminal = forwardRef<TerminalHandle, TerminalProps>(({ isConnected, onCom
           setCommandInput(firstWord)
           setShowSuggestions(firstWord.length > 0)
         }
-      } else if (code === 9) { // Tab - handled by CommandSuggestions
+      } else if (code === 9) { // Tab
+        // Pokud jsou suggestions viditelné, dokončit příkaz
+        if (showSuggestions && typeof (window as any).__commandSuggestionComplete === 'function') {
+          (window as any).__commandSuggestionComplete()
+        }
         // Nepsat tab do terminálu
         return
       } else if (code >= 32) { // Printable characters
