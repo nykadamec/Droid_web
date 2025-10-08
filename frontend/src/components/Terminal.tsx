@@ -171,9 +171,22 @@ const Terminal = forwardRef<TerminalHandle, TerminalProps>(({ isConnected, curre
       }
       
       if (code === 13) { // Enter
-        xterm.write('\r\n')
         const command = commandBufferRef.current.trim()
-        if (command && isConnected) {
+        
+        // Ignorovat prázdný příkaz - nezobrazovat nový řádek ani prompt
+        if (!command) {
+          commandBufferRef.current = ''
+          setCommandInput('')
+          setShowSuggestions(false)
+          showSuggestionsRef.current = false
+          setSuggestionIndex(0)
+          suggestionIndexRef.current = 0
+          return
+        }
+        
+        xterm.write('\r\n')
+        
+        if (isConnected) {
           // Detekce PTY příkazů
           const needsPTY = ['droid', 'vim', 'nano', 'top', 'htop'].some(cmd => 
             command.startsWith(cmd)
@@ -182,9 +195,6 @@ const Terminal = forwardRef<TerminalHandle, TerminalProps>(({ isConnected, curre
             ptyModeRef.current = true
           }
           onCommand(command)
-        } else if (!command) {
-          // Prázdný příkaz - zobrazit prompt (cesta se načte ze serveru)
-          xterm.write('$ ')
         }
         commandBufferRef.current = ''
         setCommandInput('')
