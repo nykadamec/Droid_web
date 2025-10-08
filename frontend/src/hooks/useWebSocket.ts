@@ -9,12 +9,23 @@ interface WebSocketMessage {
 
 type MessageHandler = (message: WebSocketMessage) => void
 
+// Generovat nebo získat session ID z localStorage
+function getSessionId(): string {
+  let sessionId = localStorage.getItem('terminal-session-id')
+  if (!sessionId) {
+    sessionId = `session-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+    localStorage.setItem('terminal-session-id', sessionId)
+  }
+  return sessionId
+}
+
 export function useWebSocket(onMessage?: MessageHandler) {
   const [status, setStatus] = useState<ConnectionStatus>('disconnected')
   const wsRef = useRef<WebSocket | null>(null)
   const reconnectTimeoutRef = useRef<number>()
   const reconnectAttemptsRef = useRef(0)
   const messageHandlerRef = useRef<MessageHandler | undefined>(onMessage)
+  const sessionIdRef = useRef<string>(getSessionId())
 
   useEffect(() => {
     messageHandlerRef.current = onMessage
@@ -35,6 +46,12 @@ export function useWebSocket(onMessage?: MessageHandler) {
         setStatus('connected')
         reconnectAttemptsRef.current = 0
         console.log('WebSocket connected')
+        
+        // Inicializovat session
+        ws.send(JSON.stringify({
+          type: 'init-session',
+          payload: { sessionId: sessionIdRef.current }
+        }))
       }
 
       ws.onmessage = (event) => {

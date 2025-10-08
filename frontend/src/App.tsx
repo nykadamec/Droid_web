@@ -12,6 +12,15 @@ function App() {
     if (!terminalRef.current) return
 
     switch (message.type) {
+      case 'restore-buffer':
+        // Obnovit buffer po reconnectu
+        if (message.payload.data) {
+          terminalRef.current.writeOutput(message.payload.data)
+        }
+        break
+      case 'session-ready':
+        console.log('Session ready:', message.payload.sessionId)
+        break
       case 'output':
         if (message.payload.data) {
           // Nahradit \n za \r\n pro správné zarovnání

@@ -3,10 +3,11 @@ import { createServer, IncomingMessage } from 'http'
 import { z } from 'zod'
 import { DroidBridge } from '../droid/bridge.js'
 import { PTYSession } from '../droid/pty-session.js'
+import { SessionManager } from '../session/session-manager.js'
 import { logger } from '../utils/logger.js'
 
 const MessageSchema = z.object({
-  type: z.enum(['command', 'ping', 'pty-input', 'pty-resize']),
+  type: z.enum(['command', 'ping', 'pty-input', 'pty-resize', 'init-session']),
   payload: z.any()
 })
 
@@ -15,6 +16,8 @@ export class WebSocketServer {
   private httpServer: ReturnType<typeof createServer> | null = null
   private clients = new Set<WebSocket>()
   private ptySessions = new Map<WebSocket, PTYSession>()
+  private sessionManager = new SessionManager()
+  private clientSessions = new Map<WebSocket, string>()
 
   constructor(
     private port: number,
@@ -64,6 +67,7 @@ export class WebSocketServer {
 
     this.clients.add(ws)
 
+    // Připravit session - klient pošle session ID v první zprávě
     this.sendMessage(ws, {
       type: 'status',
       payload: { status: 'connected', message: 'Připojeno k Droid MCP serveru' }
@@ -87,6 +91,7 @@ export class WebSocketServer {
     ws.on('close', () => {
       logger.info(`Client disconnected: ${clientId}`)
       this.cleanupPTYSession(ws)
+      this.clientSessions.delete(ws)
       this.clients.delete(ws)
     })
 
@@ -98,6 +103,9 @@ export class WebSocketServer {
 
   private async handleMessage(ws: WebSocket, message: z.infer<typeof MessageSchema>) {
     switch (message.type) {
+      case 'init-session':
+        this.handleInitSession(ws, message.payload.sessionId)
+        break
       case 'command':
         await this.handleCommand(ws, message.payload.command, message.payload.usePTY)
         break
@@ -111,6 +119,31 @@ export class WebSocketServer {
         this.sendMessage(ws, { type: 'pong', payload: {} })
         break
     }
+  }
+
+  private handleInitSession(ws: WebSocket, sessionId: string): void {
+    logger.info(`Initializing session: ${sessionId}`)
+    
+    // Přiřadit session k tomuto WebSocket
+    this.clientSessions.set(ws, sessionId)
+    
+    // Získat nebo vytvořit session
+    this.sessionManager.getOrCreateSession(sessionId)
+    
+    // Poslat existující buffer klientovi
+    const buffer = this.sessionManager.getBuffer(sessionId)
+    if (buffer) {
+      this.sendMessage(ws, {
+        type: 'restore-buffer',
+        payload: { data: buffer }
+      })
+      logger.info(`Restored ${buffer.length} characters of terminal history`)
+    }
+    
+    this.sendMessage(ws, {
+      type: 'session-ready',
+      payload: { sessionId }
+    })
   }
 
   private async handleCommand(ws: WebSocket, command: string, usePTY: boolean = true) {
@@ -130,6 +163,14 @@ export class WebSocketServer {
         const result = await this.droidBridge.executeCommand(command)
         
         const cwd = result.cwd || this.droidBridge.getCurrentWorkingDirectory()
+        
+        // Uložit output do session bufferu
+        const sessionId = this.clientSessions.get(ws)
+        if (sessionId) {
+          if (result.stdout) this.sessionManager.appendToBuffer(sessionId, result.stdout)
+          if (result.stderr) this.sessionManager.appendToBuffer(sessionId, result.stderr)
+        }
+        
         this.sendMessage(ws, {
           type: 'output',
           payload: {
@@ -163,6 +204,12 @@ export class WebSocketServer {
       })
 
       ptySession.onData((data) => {
+        // Uložit PTY output do bufferu
+        const sessionId = this.clientSessions.get(ws)
+        if (sessionId) {
+          this.sessionManager.appendToBuffer(sessionId, data)
+        }
+        
         this.sendMessage(ws, {
           type: 'pty-output',
           payload: { data }
