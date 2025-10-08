@@ -2,6 +2,7 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 import path from 'path'
+import fs from 'fs'
 
 export default defineConfig({
   plugins: [
@@ -43,10 +44,15 @@ export default defineConfig({
   },
   server: {
     port: 3000,
+    https: {
+      key: fs.readFileSync(path.resolve(__dirname, '../ssl/server.key')),
+      cert: fs.readFileSync(path.resolve(__dirname, '../ssl/server.crt'))
+    },
     proxy: {
       '/ws': {
         target: 'ws://localhost:8080',
-        ws: true
+        ws: true,
+        secure: false
       }
     }
   }
