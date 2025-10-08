@@ -6,10 +6,12 @@ Moderní mobilní webová aplikace pro vzdálené používání Factory Droid CL
 
 ## 🎯 Vlastnosti
 
-- **React 19** s novým React Compilerem
-- **Vite 7** pro rychlý vývoj a build
+- **React 18** pro moderní UI
+- **Vite 5** pro rychlý vývoj a build
 - **TypeScript** pro type-safe kód
 - **xterm.js** pro plnohodnotné terminálové rozhraní
+- **PTY/TTY podpora** pro interaktivní příkazy (Droid CLI, vim, nano)
+- **node-pty** pro real-time pseudo-terminal
 - **WebSocket** real-time komunikace
 - **PWA** podpora pro offline režim
 - **Tailwind CSS** pro responsive design
@@ -100,13 +102,25 @@ Frontend se automaticky připojí k WebSocket serveru na `ws://localhost:8080/ws
 
 ### Povolené příkazy
 
-Ve výchozím nastavení jsou povoleny tyto příkazy:
-- `droid` - Factory Droid CLI
-- `help` - Nápověda
+#### Základní příkazy:
+- `help` - Zobrazit nápovědu
 - `ls` - Seznam souborů
 - `pwd` - Aktuální adresář
 - `whoami` - Aktuální uživatel
 - `date` - Datum a čas
+- `echo` - Vypsat text
+- `cat` - Zobrazit obsah souboru
+
+#### Interaktivní příkazy (s PTY podporou):
+- `droid` - **Factory Droid CLI** (plně funkční)
+- `vim`, `nano` - Textové editory
+- `top`, `htop` - System monitoring
+
+💡 **Interaktivní příkazy běží v PTY režimu** - to znamená, že mají plnou podporu pro:
+- Barevný výstup
+- Kurzorové pohyby
+- Interaktivní vstup
+- Real-time aktualizace
 
 ## 🔒 Bezpečnost
 
@@ -129,6 +143,7 @@ Ve výchozím nastavení jsou povoleny tyto příkazy:
 - Node.js 20+
 - TypeScript 5.6+
 - WebSocket (ws)
+- **node-pty** (PTY/TTY support)
 - Zod (validace)
 - Pino (logging)
 
