@@ -145,9 +145,9 @@ function App() {
           onCommand={sendCommand}
           onPTYInput={sendPTYInput}
           onPTYResize={sendPTYResize}
-          onRequestFiles={(prefix) => {
+          onRequestFiles={(prefix, command) => {
             // Požádat server o seznam souborů pro completion
-            sendMessage({ type: 'request-files', payload: { prefix } })
+            sendMessage({ type: 'request-files', payload: { prefix, command } })
           }}
         />
       </main>

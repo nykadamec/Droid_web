@@ -11,7 +11,7 @@ interface TerminalProps {
   onCommand: (command: string, usePTY?: boolean) => void
   onPTYInput?: (data: string) => void
   onPTYResize?: (cols: number, rows: number) => void
-  onRequestFiles?: (path: string) => void
+  onRequestFiles?: (path: string, command?: string) => void
 }
 
 export interface TerminalHandle {
@@ -140,11 +140,12 @@ const Terminal = forwardRef<TerminalHandle, TerminalProps>(({ isConnected, curre
         const cmdTokens = currentCmd.split(' ')
         if (cmdTokens.length > 1 && onRequestFiles) {
           // Druhé+ slovo = argument (soubor/složka)
+          const command = cmdTokens[0] // První slovo = příkaz (např. "cd")
           const finalToken = cmdTokens.slice(-1)[0] || ''
           // Uložit aktuální buffer pro pozdější re-print
           const win: any = window
           win.__currentCommandBuffer = currentCmd
-          onRequestFiles(finalToken)
+          onRequestFiles(finalToken, command)
           return
         }
       }

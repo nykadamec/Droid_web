@@ -117,7 +117,7 @@ export class WebSocketServer {
         })
         break
       case 'request-files':
-        await this.handleRequestFiles(ws, message.payload.prefix || '')
+        await this.handleRequestFiles(ws, message.payload.prefix || '', message.payload.command)
         break
       case 'command':
         await this.handleCommand(ws, message.payload.command, message.payload.usePTY)
@@ -291,18 +291,32 @@ export class WebSocketServer {
     }
   }
 
-  private async handleRequestFiles(ws: WebSocket, prefix: string) {
+  private async handleRequestFiles(ws: WebSocket, prefix: string, command?: string) {
     try {
       const { readdirSync, statSync } = await import('fs')
       const { join } = await import('path')
       
       const cwd = this.droidBridge.getCurrentWorkingDirectory()
       
+      // Pro příkaz "cd" zobrazit pouze složky
+      const onlyDirectories = command === 'cd'
+      
       // Získat všechny soubory/složky v CWD
       const entries = readdirSync(cwd)
       
-      // Filtrovat podle prefixu
+      // Filtrovat podle prefixu a typu
       const matches = entries.filter(entry => {
+        // Pro "cd" pouze složky
+        if (onlyDirectories) {
+          const fullPath = join(cwd, entry)
+          try {
+            const stats = statSync(fullPath)
+            if (!stats.isDirectory()) return false
+          } catch {
+            return false
+          }
+        }
+        
         return entry.toLowerCase().startsWith(prefix.toLowerCase())
       })
       
