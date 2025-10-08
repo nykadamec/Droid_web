@@ -100,33 +100,48 @@ Frontend se automaticky připojí k WebSocket serveru na `ws://localhost:8080/ws
 2. Počkejte na připojení k MCP serveru
 3. Zadejte příkazy do terminálu
 
-### Povolené příkazy
+### Full System Access
 
-#### Základní příkazy:
-- `help` - Zobrazit nápovědu
+🔓 **Všechny systémové příkazy jsou povoleny** - žádný whitelist, plný přístup k shellu.
+
+#### Klíčové funkce:
+
+**Navigace:**
+- `cd <dir>` - Změnit adresář (s podporou `~`, relativních a absolutních cest)
+- `pwd` - Zobrazit aktuální adresář
 - `ls` - Seznam souborů
-- `pwd` - Aktuální adresář
-- `whoami` - Aktuální uživatel
-- `date` - Datum a čas
-- `echo` - Vypsat text
-- `cat` - Zobrazit obsah souboru
 
-#### Interaktivní příkazy (s PTY podporou):
-- `droid` - **Factory Droid CLI** (plně funkční)
+**Interaktivní příkazy (PTY režim):**
+- `droid` - **Factory Droid CLI** (plně funkční!)
 - `vim`, `nano` - Textové editory
 - `top`, `htop` - System monitoring
 
-💡 **Interaktivní příkazy běží v PTY režimu** - to znamená, že mají plnou podporu pro:
-- Barevný výstup
-- Kurzorové pohyby
-- Interaktivní vstup
-- Real-time aktualizace
+**Běžné příkazy:**
+- Veškeré bash/zsh příkazy: `cat`, `grep`, `find`, `git`, atd.
+- Skripty a programy
+- Package managery: `npm`, `pip`, `brew`, atd.
+
+💡 **Terminal podporuje:**
+- ✅ Aktuální adresář v promptu (např. `~/Documents ➜`)
+- ✅ Barevný výstup (ANSI colors)
+- ✅ PTY režim pro interaktivní aplikace
+- ✅ Persistentní working directory napříč příkazy
 
 ## 🔒 Bezpečnost
 
-- **Command whitelisting** - pouze povolené příkazy mohou být spuštěny
+⚠️ **Full system access** - aplikace má plný přístup k systému přes shell.
+
+**Doporučení pro produkční nasazení:**
+- Spouštět v izolovaném Docker containeru
+- Použít read-only file system kde je to možné
+- Implementovat whitelist příkazů pro konkrétní use case
+- Přidat autentizaci a autorizaci uživatelů
+- Logovat všechny spuštěné příkazy
+
+**Současná bezpečnostní opatření:**
 - **Timeout** - příkazy jsou limitovány na 30 sekund
-- **Sanitizace** - vstup je validován pomocí Zod schémat
+- **Validace zpráv** - WebSocket zprávy jsou validovány pomocí Zod
+- **Isolated sessions** - každý WebSocket má vlastní PTY session
 
 ## 🛠️ Technologie
 
